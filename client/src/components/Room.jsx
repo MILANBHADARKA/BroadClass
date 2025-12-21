@@ -5,7 +5,6 @@ import './Room.css';
 function Room({ client, roomId, isInstructor, onLeave, participantCount, messages, remoteVideos, onSendMessage }) {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [hasLocalMedia, setHasLocalMedia] = useState(false);
   
   const localVideoRef = useRef(null);
   const videoGridRef = useRef(null);
@@ -33,61 +32,36 @@ function Room({ client, roomId, isInstructor, onLeave, participantCount, message
       // Initialize device
       await client.initializeDevice();
       
-      // Try to get user media (optional for students)
-      let stream = null;
-      try {
-        stream = await client.getUserMedia(true, true);
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-        
-        setHasLocalMedia(true);
-        
-        // Produce video and audio
-        const videoTrack = stream.getVideoTracks()[0];
-        const audioTrack = stream.getAudioTracks()[0];
-        
-        if (videoTrack) {
-          await client.produce(videoTrack);
-          console.log('[Room] Producing video');
-        }
-        
-        if (audioTrack) {
-          await client.produce(audioTrack);
-          console.log('[Room] Producing audio');
-        }
-        
-        if (isInstructor) {
-          console.log('[Room] Instructor - media initialized and producing');
-        } else {
-          console.log('[Room] Student - media initialized and producing');
-        }
-      } catch (mediaError) {
-        console.warn('[Room] Could not access camera/microphone:', mediaError.message);
-        
-        if (isInstructor) {
-          // Instructor MUST have camera/mic
-          alert('Instructor requires camera and microphone access to create a room.');
-          throw mediaError;
-        } else {
-          // Students can join without camera/mic (view-only mode)
-          console.log('[Room] Student joining in view-only mode (no camera/mic)');
-          alert('Joining in view-only mode. You can watch but not share your video.');
-        }
+      // Get user media
+      const stream = await client.getUserMedia(true, true);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
       }
       
-      // If student, get existing producers after a delay
+      // Produce video and audio
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+      
+      if (videoTrack) {
+        await client.produce(videoTrack);
+      }
+      
+      if (audioTrack) {
+        await client.produce(audioTrack);
+      }
+      
+      // If student, get existing producers
       if (!isInstructor) {
         console.log('[Room] Student joined, requesting existing producers...');
         setTimeout(() => {
           client.getProducers();
         }, 1000); // Give time for transport to be ready
+      } else {
+        console.log('[Room] Instructor - media initialized and producing');
       }
     } catch (error) {
-      console.error('[Room] Error initializing:', error);
-      if (isInstructor) {
-        alert('Failed to initialize room. Please check permissions and try again.');
-      }
+      console.error('Error initializing media:', error);
+      alert('Failed to access camera/microphone. Please check permissions.');
     }
   };
 
@@ -124,36 +98,34 @@ function Room({ client, roomId, isInstructor, onLeave, participantCount, message
       </div>
 
       <div className="room-content">
-        <div className="vide- only show if user has granted camera/mic access */}
-            {hasLocalMedia && (
-              <div className="video-wrapper">
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                />
-                <div className="video-label">
-                  You ({isInstructor ? 'Instructor' : 'Student'})
-                </div>
-                <div className="video-controls">
-                  <button
-                    className={`control-btn ${!isVideoEnabled ? 'disabled' : ''}`}
-                    onClick={handleToggleVideo}
-                    title="Toggle Video"
-                  >
-                    <span>{isVideoEnabled ? '📹' : '🚫'}</span>
-                  </button>
-                  <button
-                    className={`control-btn ${!isAudioEnabled ? 'disabled' : ''}`}
-                    onClick={handleToggleAudio}
-                    title="Toggle Audio"
-                  >
-                    <span>{isAudioEnabled ? '🎤' : '🔇'}</span>
-                  </button>
-                </div>
+        <div className="video-container">
+          <div className="video-grid" ref={videoGridRef}>
+            {/* Local video */}
+            <div className="video-wrapper">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                muted
+                playsInline
+              />
+              <div className="video-label">
+                You ({isInstructor ? 'Instructor' : 'Student'})
               </div>
-            )}button>
+              <div className="video-controls">
+                <button
+                  className={`control-btn ${!isVideoEnabled ? 'disabled' : ''}`}
+                  onClick={handleToggleVideo}
+                  title="Toggle Video"
+                >
+                  <span>{isVideoEnabled ? '📹' : '🚫'}</span>
+                </button>
+                <button
+                  className={`control-btn ${!isAudioEnabled ? 'disabled' : ''}`}
+                  onClick={handleToggleAudio}
+                  title="Toggle Audio"
+                >
+                  <span>{isAudioEnabled ? '🎤' : '🔇'}</span>
+                </button>
               </div>
             </div>
 
