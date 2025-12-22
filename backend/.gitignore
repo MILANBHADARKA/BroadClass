@@ -1,0 +1,39 @@
+# Node dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# Build output
+dist/
+build/
+coverage/
+lib/
+*.tsbuildinfo
+
+# Runtime files
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Misc
+.cache/
+*.tgz
+*.sqlite
+*.sqlite3
