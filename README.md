@@ -1,12 +1,16 @@
-# Mediasoup Broadcast System
+# Mediasoup Broadcast System (Production-Ready)
 
-A simple one-to-many broadcast system using mediasoup, Socket.IO, Express, and React.
+A scalable one-to-many broadcast system using mediasoup, Socket.IO, Express, and React. Built with modern **ES Modules (ESM)** and production-grade architecture.
 
 ## Features
-- Start a broadcast with camera and microphone
-- View list of active broadcasts
-- Watch any active broadcast in real-time
-- Simple and clean UI with comments
+- 🎥 Start a broadcast with camera and microphone
+- 📋 View list of active broadcasts
+- 👁️ Watch any active broadcast in real-time
+- 🎛️ Camera/mic on/off controls during broadcast
+- 📊 Adaptive video quality (Simulcast)
+- ⚡ Multi-worker architecture (scales with CPU cores)
+- 🔧 Production-ready with proper resource management
+- 🌐 Modern ES Modules syntax throughout
 
 ## Setup Instructions
 

@@ -22,14 +22,15 @@
 
 .broadcast-section .video-element {
   width: 100%;
-  max-width: 640px;
+  /* max-width: 640px; */
   height: auto;
   min-height: 400px;
   display: block;
   background: #000;
   object-fit: contain;
-  transform: scaleX(-1);
+  /* transform: scaleX(-1); */
 }
+
 
 .broadcast-controls {
   display: flex;
@@ -95,6 +96,47 @@
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.3s;
+}
+
+.media-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-media {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.btn-on {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-on:hover {
+  background-color: #45a049;
+}
+
+.btn-off {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-off:hover {
+  background-color: #da190b;
+}
+
+@media (max-width: 768px) {
+  .media-controls {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .btn-media {
+    flex: 1;
+    min-width: 120px;
+  }
 }
 
 .btn-start {
