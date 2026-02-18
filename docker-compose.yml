@@ -1,0 +1,163 @@
+services:
+  # Redis - The Brain (Tracks Edge servers and load)
+  redis:
+    image: redis:7-alpine
+    container_name: broadcast-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: 
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - "256mb"
+      - --maxmemory-policy
+      - "allkeys-lru"
+      - --requirepass
+      - "${REDIS_PASSWORD:-broadcast123}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-broadcast123}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - broadcast-network
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-broadcast123}
+
+  # Origin Server - Source of truth for broadcasts
+  origin-server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: broadcast-origin
+    ports:
+      - "3001:3001"
+      - "40000-40099:40000-40099/udp"
+    environment:
+      - PORT=3001
+      - NODE_ENV=${NODE_ENV:-production}
+      - ROLE=ORIGIN
+      - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - ENABLE_SIMULCAST=true
+      - LOG_LEVEL=warn
+      - NUM_WORKERS=4
+      - RTC_MIN_PORT=40000
+      - RTC_MAX_PORT=40099
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - broadcast-network
+
+  # Edge Server 1
+  edge-server-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.edge
+    container_name: broadcast-edge-1
+    ports:
+      - "3002:3002"
+      - "50000-50099:50000-50099/udp"
+    environment:
+      - PORT=3002
+      - EXTERNAL_PORT=3002
+      - INTERNAL_HOST=edge-server-1
+      - NODE_ENV=${NODE_ENV:-production}
+      - ROLE=EDGE
+      - SERVER_ID=EDGE-01
+      - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
+      - ORIGIN_IP=origin-server
+      - ORIGIN_PORT=3001
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - MAX_CAPACITY=200
+      - HEALTH_CHECK_INTERVAL=10000
+      - LOG_LEVEL=warn
+      - NUM_WORKERS=2
+      - RTC_MIN_PORT=50000
+      - RTC_MAX_PORT=50099
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - broadcast-network
+
+  # Edge Server 2
+  edge-server-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.edge
+    container_name: broadcast-edge-2
+    ports:
+      - "3003:3002"
+      - "54000-54099:54000-54099/udp"
+    environment:
+      - PORT=3002
+      - EXTERNAL_PORT=3003
+      - INTERNAL_HOST=edge-server-2
+      - NODE_ENV=${NODE_ENV:-production}
+      - ROLE=EDGE
+      - SERVER_ID=EDGE-02
+      - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
+      - ORIGIN_IP=origin-server
+      - ORIGIN_PORT=3001
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - MAX_CAPACITY=200
+      - HEALTH_CHECK_INTERVAL=10000
+      - LOG_LEVEL=warn
+      - NUM_WORKERS=2
+      - RTC_MIN_PORT=54000
+      - RTC_MAX_PORT=54099
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - broadcast-network
+
+  # Edge Server 3
+  edge-server-3:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.edge
+    container_name: broadcast-edge-3
+    ports:
+      - "3004:3002"
+      - "52000-52099:52000-52099/udp"
+    environment:
+      - PORT=3002
+      - EXTERNAL_PORT=3004
+      - INTERNAL_HOST=edge-server-3
+      - NODE_ENV=${NODE_ENV:-production}
+      - ROLE=EDGE
+      - SERVER_ID=EDGE-03
+      - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
+      - ORIGIN_IP=origin-server
+      - ORIGIN_PORT=3001
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - MAX_CAPACITY=200
+      - HEALTH_CHECK_INTERVAL=10000
+      - LOG_LEVEL=warn
+      - NUM_WORKERS=2
+      - RTC_MIN_PORT=52000
+      - RTC_MAX_PORT=52099
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - broadcast-network
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  broadcast-network:
+    driver: bridge
