@@ -3,3 +3,46 @@ work.txt
 requrements.txt
 
 .md_files
+
+.env 
+.env.*
+
+# Logs
+logs
+*.log
+README_FANOUT.md
+
+
+00_START_HERE.md
+SYSTEM_SUMMARY.md
+
+load-testing/
+
+
+npm-debug.log*
+yarn-debug.log*
+COMPLETE_FILE_MANIFEST.md
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+docker-logs-origin.txt
+
+IMPLEMENTATION_STATUS.md
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+QUICK_START.md
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+DEPLOYMENT_GUIDE.md
+*.njsproj
+*.sln
+FANOUT_ARCHITECTURE_GUIDE.md
+*.sw?
