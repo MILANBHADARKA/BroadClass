@@ -7,6 +7,7 @@
 import { mediaCodecs } from '../config/mediaCodecs.js';
 import { createLogger } from '../utils/logger.js';
 import { connectEdgeServers, cleanupPipes } from './pipeManager.js';
+import prisma from '../services/prisma.js';
 
 const log = createLogger('origin:socket');
 
@@ -21,13 +22,20 @@ const log = createLogger('origin:socket');
  */
 export function registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker }) {
   /** Helper: build broadcast list for clients */
-  function getBroadcastList() {
-    return Array.from(broadcasts.entries()).map(([roomId, b]) => ({
-      roomId,
-      viewerCount: 0,
-      hasVideo: b.producers.has('video'),
-      hasAudio: b.producers.has('audio'),
-    }));
+  async function getBroadcastList() {
+    const entries = Array.from(broadcasts.entries());
+    const list = await Promise.all(
+      entries.map(async ([roomId, b]) => {
+        const stored = await redisClient.getBroadcast(roomId);
+        return {
+          roomId,
+          viewerCount: stored?.viewerCount ?? 0,
+          hasVideo: b.producers.has('video'),
+          hasAudio: b.producers.has('audio'),
+        };
+      }),
+    );
+    return list;
   }
 
   /** Cleanup a broadcast and all its resources */
@@ -47,7 +55,7 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
     await redisClient.endBroadcast(roomId);
 
     log.info(`Broadcast cleaned up: ${roomId}`);
-    io.emit('broadcastList', getBroadcastList());
+    io.emit('broadcastList', await getBroadcastList());
   }
 
   // Per-socket resource tracking
@@ -62,13 +70,14 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
       producers: [],
       consumers: [],
       roomId: null,
+      viewerCounted: false,
     });
 
     // Capabilities
     socket.on('getRouterRtpCapabilities', (cb) => cb(state.rtpCapabilities));
 
     // Broadcast List
-    socket.on('getBroadcasts', (cb) => cb(getBroadcastList()));
+    socket.on('getBroadcasts', async (cb) => cb(await getBroadcastList()));
 
     // Create Transport
     socket.on('createWebRtcTransport', async ({ sender, roomId }, cb) => {
@@ -76,6 +85,23 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
         let broadcast = broadcasts.get(roomId);
 
         if (sender) {
+          // ── TEACHER ONLY: verify classroom ownership ──
+          if (!socket.user || socket.user.role !== 'TEACHER') {
+            return cb({ error: 'Only teachers can broadcast' });
+          }
+
+          try {
+            const classroom = await prisma.classroom.findUnique({
+              where: { id: roomId },
+            });
+            if (!classroom) return cb({ error: 'Classroom not found' });
+            if (classroom.teacherId !== socket.user.id) {
+              return cb({ error: 'You do not own this classroom' });
+            }
+          } catch (dbErr) {
+            log.warn('DB check failed, allowing broadcast:', dbErr.message);
+          }
+
           if (broadcast?.broadcasterId && broadcast.broadcasterId !== socket.id) {
             return cb({ error: `Room "${roomId}" already has a broadcaster` });
           }
@@ -122,6 +148,25 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
         } else {
           // Fallback viewer on origin
           if (!broadcast) return cb({ error: 'Broadcast not found' });
+
+          // ── STUDENT ONLY: verify enrollment ──
+          if (socket.user && socket.user.role === 'STUDENT') {
+            try {
+              const enrollment = await prisma.enrollment.findUnique({
+                where: {
+                  classroomId_studentId: {
+                    classroomId: roomId,
+                    studentId: socket.user.id,
+                  },
+                },
+              });
+              if (!enrollment) {
+                return cb({ error: 'You are not enrolled in this classroom' });
+              }
+            } catch (dbErr) {
+              log.warn('DB enrollment check failed, allowing view:', dbErr.message);
+            }
+          }
 
           log.info(`Fallback viewer ${socket.id} on origin for ${roomId}`);
 
@@ -219,7 +264,7 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
         }
 
         cb({ producerId: producer.id });
-        io.emit('broadcastList', getBroadcastList());
+        io.emit('broadcastList', await getBroadcastList());
       } catch (err) {
         log.error('Error starting broadcast:', err);
         cb({ error: err.message });
@@ -239,9 +284,15 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
           joinedAt: Date.now(),
         });
 
-        socketResources.get(socket.id).roomId = roomId;
+        const res = socketResources.get(socket.id);
+        res.roomId = roomId;
+        res.viewerCounted = true;
+
+        await redisClient.updateBroadcastViewerCount(roomId, 1);
         log.info(`Fallback viewer ${socket.id} joined ${roomId} (${broadcast.viewers.size} viewers)`);
+
         cb({ success: true });
+        io.emit('broadcastList', await getBroadcastList());
       } catch (err) {
         log.error('Error joining broadcast:', err);
         cb({ error: err.message });
@@ -311,6 +362,16 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
         viewer.consumers.forEach((c) => { try { c.close(); } catch (_) {} });
         broadcast.viewers.delete(socket.id);
       }
+
+      const res = socketResources.get(socket.id);
+      if (res?.viewerCounted) {
+        res.viewerCounted = false;
+        redisClient.updateBroadcastViewerCount(roomId, -1)
+          .then(async () => {
+            io.emit('broadcastList', await getBroadcastList());
+          })
+          .catch(() => {});
+      }
     });
 
     // Disconnect
@@ -324,6 +385,16 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
           const viewer = broadcast.viewers.get(socket.id);
           viewer?.consumers.forEach((c) => { try { c.close(); } catch (_) {} });
           broadcast.viewers.delete(socket.id);
+
+          const res = socketResources.get(socket.id);
+          if (res?.viewerCounted) {
+            res.viewerCounted = false;
+            redisClient.updateBroadcastViewerCount(roomId, -1)
+              .then(async () => {
+                io.emit('broadcastList', await getBroadcastList());
+              })
+              .catch(() => {});
+          }
         }
       });
 

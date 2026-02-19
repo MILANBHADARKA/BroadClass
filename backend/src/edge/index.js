@@ -7,6 +7,7 @@ import { RedisClient } from '../services/redisClient.js';
 import { registerEdgeRoutes } from './routes.js';
 import { registerEdgeSocketHandlers } from './socketHandlers.js';
 import { createLogger } from '../utils/logger.js';
+import { socketAuthMiddleware } from '../middleware/auth.js';
 
 const log = createLogger('edge');
 const containerIp = getContainerIp();
@@ -64,7 +65,11 @@ async function start() {
   edgeState.io = io;
 
   registerEdgeRoutes({ app, config, edgeState });
-  registerEdgeSocketHandlers({ io, config, edgeState });
+
+  // Socket.IO auth middleware
+  io.use(socketAuthMiddleware);
+
+  registerEdgeSocketHandlers({ io, config, edgeState, redisClient });
 
   // 4. Listen
   httpServer.listen(config.port, () => {

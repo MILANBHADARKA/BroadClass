@@ -7,6 +7,8 @@
  */
 
 import { createLogger } from '../utils/logger.js';
+import { verifyToken } from '../middleware/auth.js';
+import prisma from '../services/prisma.js';
 
 const log = createLogger('origin:api');
 
@@ -33,13 +35,32 @@ export function registerOriginRoutes({ app, config, redisClient, state }) {
     }
   });
 
-  // Load Balancer – Best Edge
-  app.get('/api/best-server', async (req, res) => {
+  // Load Balancer – Best Edge (protected)
+  app.get('/api/best-server', verifyToken, async (req, res) => {
     try {
       const { roomId } = req.query;
       if (!roomId) return res.status(400).json({ error: 'roomId query parameter required' });
 
       log.info(`Load balancer query for room: ${roomId}`);
+
+      // Verify enrollment for students
+      if (req.user.role === 'STUDENT') {
+        try {
+          const enrollment = await prisma.enrollment.findUnique({
+            where: {
+              classroomId_studentId: {
+                classroomId: roomId,
+                studentId: req.user.id,
+              },
+            },
+          });
+          if (!enrollment) {
+            return res.status(403).json({ error: 'Not enrolled in this classroom' });
+          }
+        } catch (dbErr) {
+          log.warn('DB enrollment check failed:', dbErr.message);
+        }
+      }
 
       const broadcast = await redisClient.getBroadcast(roomId);
       if (!broadcast || broadcast.status !== 'active') {

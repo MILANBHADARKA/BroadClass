@@ -21,6 +21,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Generate Prisma client
+RUN npx prisma generate
+
 # Expose ports
 EXPOSE 3001 40000-40099/udp
 
@@ -28,5 +31,5 @@ EXPOSE 3001 40000-40099/udp
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3001/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# Start origin server
-CMD ["node", "src/origin/index.js"]
+# Run migrations then start origin server
+CMD ["sh", "-c", "npx prisma migrate deploy && node src/origin/index.js"]

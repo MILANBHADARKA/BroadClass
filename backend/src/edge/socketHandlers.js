@@ -8,7 +8,7 @@ const log = createLogger('edge:socket');
  * @param {object}  deps.config
  * @param {object}  deps.edgeState  – shared edge state
  */
-export function registerEdgeSocketHandlers({ io, config, edgeState }) {
+export function registerEdgeSocketHandlers({ io, config, edgeState, redisClient }) {
   const socketResources = new Map();
 
   io.on('connection', (socket) => {
@@ -19,6 +19,7 @@ export function registerEdgeSocketHandlers({ io, config, edgeState }) {
       consumerTransport: null,
       consumers: [],
       roomId: null,
+      viewerCounted: false,
     });
 
     // Capabilities
@@ -33,7 +34,11 @@ export function registerEdgeSocketHandlers({ io, config, edgeState }) {
         if (!broadcast) return cb({ error: 'Broadcast not found on this edge server' });
         if (broadcast.virtualProducers.size === 0) return cb({ error: 'Broadcast not ready yet (no producers)' });
 
-        socketResources.get(socket.id).roomId = roomId;
+        const res = socketResources.get(socket.id);
+        res.roomId = roomId;
+        res.viewerCounted = true;
+        await redisClient.updateBroadcastViewerCount(roomId, 1);
+
         log.info(`Student ${socket.id} joined room ${roomId}`);
         cb({ success: true });
       } catch (err) {
@@ -170,6 +175,11 @@ export function registerEdgeSocketHandlers({ io, config, edgeState }) {
 
       const res = socketResources.get(socket.id);
       if (res) {
+        if (res.viewerCounted && res.roomId) {
+          redisClient.updateBroadcastViewerCount(res.roomId, -1)
+            .catch(() => {});
+          res.viewerCounted = false;
+        }
         res.consumers.forEach((c) => { try { c.close(); } catch (_) {} });
         try { res.consumerTransport?.close(); } catch (_) {}
       }

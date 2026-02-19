@@ -1,6 +1,6 @@
-# Mediasoup Broadcast System (Production-Ready)
+# MediaRooms
 
-A scalable one-to-many broadcast system using mediasoup, Socket.IO, Express, and React. Built with modern **ES Modules (ESM)** and production-grade architecture.
+A scalable one-to-many live classroom broadcast platform using mediasoup, Socket.IO, Express, and React. Built with modern **ES Modules (ESM)** and production-grade architecture.
 
 ## Features
 - 🎥 Start a broadcast with camera and microphone

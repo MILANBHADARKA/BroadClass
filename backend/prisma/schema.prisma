@@ -1,0 +1,65 @@
+// Prisma schema for Broadcast Classroom Auth
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ──────────────────────────────────────────────────
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+// ── Models ─────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // bcrypt hash
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  classrooms  Classroom[]  // classrooms this teacher owns
+  enrollments Enrollment[] // classrooms this student joined
+}
+
+model Classroom {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  subject     String?
+  code        String   @unique // 6-char join code
+  teacherId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+
+  @@index([teacherId])
+  @@index([code])
+}
+
+model Enrollment {
+  id          String   @id @default(uuid())
+  classroomId String
+  studentId   String
+  joinedAt    DateTime @default(now())
+
+  // Relations
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, studentId]) // student can only join once
+  @@index([studentId])
+  @@index([classroomId])
+}

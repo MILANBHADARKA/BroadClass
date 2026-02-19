@@ -142,6 +142,31 @@ export class RedisClient {
     return key;
   }
 
+  async updateBroadcastViewerCount(roomId, delta) {
+    const key = `broadcast:${roomId}`;
+    const data = await this.client.get(key);
+    if (!data) return null;
+
+    const broadcast = JSON.parse(data);
+    const current = broadcast.viewerCount || 0;
+    const next = Math.max(0, current + delta);
+    broadcast.viewerCount = next;
+
+    await this.client.set(key, JSON.stringify(broadcast));
+    await this.client.publish('broadcast:viewerCount', JSON.stringify({ roomId, viewerCount: next }));
+    return next;
+  }
+
+  async subscribeToViewerCount(callback) {
+    await this.subscriber.subscribe('broadcast:viewerCount', (message) => {
+      try {
+        callback?.(JSON.parse(message));
+      } catch {
+        // ignore malformed pub/sub messages
+      }
+    });
+  }
+
   async getBroadcast(roomId) {
     const data = await this.client.get(`broadcast:${roomId}`);
     return data ? JSON.parse(data) : null;

@@ -7,6 +7,10 @@ import { RedisClient } from '../services/redisClient.js';
 import { registerOriginRoutes } from './routes.js';
 import { registerOriginSocketHandlers } from './socketHandlers.js';
 import { createLogger } from '../utils/logger.js';
+import authRoutes from './authRoutes.js';
+import classroomRoutes from './classroomRoutes.js';
+import { socketAuthMiddleware } from '../middleware/auth.js';
+import prisma from '../services/prisma.js';
 
 const log = createLogger('origin');
 const containerIp = getContainerIp();
@@ -52,20 +56,41 @@ async function start() {
   state.rtpCapabilities = rtpCapabilities;
   const getNextWorker = createWorkerPool(workers);
 
-  // 3. Express + Socket.IO
+  // 3. Verify database connection
+  try {
+    await prisma.$connect();
+    log.info('PostgreSQL connected via Prisma');
+  } catch (dbErr) {
+    log.warn('PostgreSQL not available – auth features disabled:', dbErr.message);
+  }
+
+  // 4. Express + Socket.IO
   const { app, httpServer, io } = createApp();
 
+  // Auth & Classroom REST routes
+  app.use('/api/auth', authRoutes);
+  app.use('/api/classrooms', classroomRoutes);
+
   registerOriginRoutes({ app, config, redisClient, state });
+
+  // Socket.IO auth middleware
+  io.use(socketAuthMiddleware);
+
+  // Redis pub/sub → live viewer count updates
+  await redisClient.subscribeToViewerCount((payload) => {
+    io.emit('viewerCount', payload);
+  });
+
   registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker });
 
-  // 4. Listen
+  // 5. Listen
   httpServer.listen(config.port, () => {
     log.info(`ORIGIN SERVER running on port ${config.port}`);
     log.info(`  Network: http://${config.announcedIp}:${config.port}`);
     log.info('Ready to receive broadcasts and pipe to Edge servers');
   });
 
-  // 5. Graceful shutdown
+  // 6. Graceful shutdown
   const shutdown = async () => {
     log.info('Shutting down...');
     broadcasts.forEach((b) => {
@@ -73,6 +98,7 @@ async function start() {
       try { b.router.close(); } catch (_) {}
     });
     workers.forEach((w) => { try { w.close(); } catch (_) {} });
+    await prisma.$disconnect();
     await redisClient.disconnect();
     httpServer.close(() => {
       log.info('Origin server stopped');

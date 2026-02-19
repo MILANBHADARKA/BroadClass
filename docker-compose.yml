@@ -24,7 +24,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - broadcast-network
+      - mediarooms-network
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-broadcast123}
 
@@ -33,7 +33,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: broadcast-origin
+    container_name: mediarooms-origin
     ports:
       - "3001:3001"
       - "40000-40099:40000-40099/udp"
@@ -43,6 +43,10 @@ services:
       - ROLE=ORIGIN
       - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+      - JWT_EXPIRES_IN=7d
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - ENABLE_SIMULCAST=true
       - LOG_LEVEL=warn
       - NUM_WORKERS=4
@@ -53,14 +57,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - broadcast-network
+      - mediarooms-network
 
   # Edge Server 1
   edge-server-1:
     build:
       context: ./backend
       dockerfile: Dockerfile.edge
-    container_name: broadcast-edge-1
+    container_name: mediarooms-edge-1
     ports:
       - "3002:3002"
       - "50000-50099:50000-50099/udp"
@@ -75,9 +79,11 @@ services:
       - ORIGIN_IP=origin-server
       - ORIGIN_PORT=3001
       - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=warn
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=50000
       - RTC_MAX_PORT=50099
@@ -86,14 +92,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - broadcast-network
+      - mediarooms-network
 
   # Edge Server 2
   edge-server-2:
     build:
       context: ./backend
       dockerfile: Dockerfile.edge
-    container_name: broadcast-edge-2
+    container_name: mediarooms-edge-2
     ports:
       - "3003:3002"
       - "54000-54099:54000-54099/udp"
@@ -108,9 +114,11 @@ services:
       - ORIGIN_IP=origin-server
       - ORIGIN_PORT=3001
       - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=warn
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=54000
       - RTC_MAX_PORT=54099
@@ -119,14 +127,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - broadcast-network
+      - mediarooms-network
 
   # Edge Server 3
   edge-server-3:
     build:
       context: ./backend
       dockerfile: Dockerfile.edge
-    container_name: broadcast-edge-3
+    container_name: mediarooms-edge-3
     ports:
       - "3004:3002"
       - "52000-52099:52000-52099/udp"
@@ -141,9 +149,11 @@ services:
       - ORIGIN_IP=origin-server
       - ORIGIN_PORT=3001
       - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=warn
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=52000
       - RTC_MAX_PORT=52099
@@ -152,12 +162,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - broadcast-network
+      - mediarooms-network
 
 volumes:
   redis-data:
     driver: local
 
 networks:
-  broadcast-network:
+  mediarooms-network:
     driver: bridge

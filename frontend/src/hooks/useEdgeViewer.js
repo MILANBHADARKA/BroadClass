@@ -5,7 +5,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-export default function useEdgeViewer({ device, onJoinBroadcast }) {
+export default function useEdgeViewer({ device, onJoinBroadcast, authToken }) {
   const [viewingRoom, setViewingRoom] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [simulcastEnabled, setSimulcastEnabled] = useState(false);
@@ -23,7 +23,9 @@ export default function useEdgeViewer({ device, onJoinBroadcast }) {
       setEdgeInfo(bestEdge);
 
       const edgeUrl = `http://${bestEdge.ip}:${bestEdge.port}`;
-      const newEdgeSocket = io(edgeUrl);
+      const newEdgeSocket = io(edgeUrl, {
+        auth: authToken ? { token: authToken } : undefined,
+      });
 
       newEdgeSocket.on('connect', async () => {
         edgeSocketRef.current = newEdgeSocket;
@@ -136,7 +138,7 @@ export default function useEdgeViewer({ device, onJoinBroadcast }) {
     } catch (err) {
       console.error('Error viewing broadcast:', err);
     }
-  }, [device, onJoinBroadcast]);
+  }, [device, onJoinBroadcast, authToken]);
 
   // Stop viewing
   const stopViewing = useCallback(() => {
