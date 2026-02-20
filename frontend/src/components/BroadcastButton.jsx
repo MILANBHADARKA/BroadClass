@@ -10,10 +10,13 @@ function BroadcastButton({ socket, device, classroomId }) {
     localStream,
     isCameraOn,
     isMicOn,
+    isScreenSharing,
     startBroadcast,
     stopBroadcast,
     toggleCamera,
     toggleMic,
+    startScreenShare,
+    stopScreenShare,
   } = useBroadcaster({ socket, device });
 
   // Attach local stream to <video> element whenever it changes
@@ -81,6 +84,17 @@ function BroadcastButton({ socket, device, classroomId }) {
             </button>
 
             <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+                className={`px-3 py-2 rounded-xl border text-xs sm:text-sm transition-all cursor-pointer
+                  ${isScreenSharing
+                    ? 'bg-accent/10 border-accent/30 text-accent'
+                    : 'bg-surface-800 border-border text-text-primary hover:bg-surface-700'
+                  }`}
+                title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
+              >
+                {isScreenSharing ? 'Stop Share' : 'Share Screen'}
+              </button>
               <button
                 onClick={toggleCamera}
                 className={`p-2.5 rounded-xl border text-sm transition-all cursor-pointer
