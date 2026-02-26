@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * ── Custom Theme ──────────────────────────────────────
+ * Custom Theme
  * Dark slate + electric teal accent. Unique, not template.
  */
 @theme {
@@ -51,7 +51,7 @@
   }
 }
 
-/* ── Utility layer ─────────────────────────────────── */
+/* Utility layer */
 @utility glass {
   background: rgba(17, 24, 39, 0.6);
   backdrop-filter: blur(20px);
@@ -85,7 +85,7 @@
   background-clip: text;
 }
 
-/* ── Keyframes ─────────────────────────────────────── */
+/* Keyframes */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }

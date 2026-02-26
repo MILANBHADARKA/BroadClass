@@ -81,7 +81,7 @@ export default function RegisterPage() {
               <label htmlFor="name" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
                 Full Name
               </label>
-              <input id="name" type="text" placeholder="John Doe" value={form.name}
+              <input id="name" type="text" placeholder="Enter Your Name" value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })} required className={inputClass} />
             </div>
 
@@ -89,7 +89,7 @@ export default function RegisterPage() {
               <label htmlFor="email" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
                 Email
               </label>
-              <input id="email" type="email" placeholder="you@example.com" value={form.email}
+              <input id="email" type="email" placeholder="Enter Your Name" value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })} required className={inputClass} />
             </div>
 
