@@ -1,8 +1,8 @@
-# MediaRooms — Frontend Architecture
+# BroadClass — Frontend Architecture
 
 ## Overview
 
-This frontend application is a React-based client for the MediaRooms broadcast platform. It allows users to either broadcast their camera/microphone to create a one-to-many stream, or view existing broadcasts in real-time.
+This frontend application is a React-based client for the BroadClass broadcast platform. It allows users to either broadcast their camera/microphone to create a one-to-many stream, or view existing broadcasts in real-time.
 
 **Key Features:**
 - Start/stop broadcasting with camera and microphone
