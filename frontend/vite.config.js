@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        viewer: resolve(__dirname, 'viewer.html'),
+        // viewer.html excluded - local load testing only (load-test-viewer.js is gitignored)
       },
       output: {
         // Chunk splitting for better caching
