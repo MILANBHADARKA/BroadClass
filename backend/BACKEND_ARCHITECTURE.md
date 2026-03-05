@@ -1,8 +1,8 @@
-# MediaRooms — Backend Architecture
+# BroadClass — Backend Architecture
 
 ## Overview
 
-This backend server implements the MediaRooms one-to-many broadcast platform using **mediasoup** (WebRTC SFU), **Socket.IO** for real-time communication, and **Express** as the web server. The server acts as a Selective Forwarding Unit (SFU), routing media streams from broadcasters to multiple viewers.
+This backend server implements the BroadClass one-to-many broadcast platform using **mediasoup** (WebRTC SFU), **Socket.IO** for real-time communication, and **Express** as the web server. The server acts as a Selective Forwarding Unit (SFU), routing media streams from broadcasters to multiple viewers.
 
 **Architecture**: Each broadcast gets its own dedicated mediasoup router for better isolation and resource management.
 

@@ -9,6 +9,7 @@
 import { createLogger } from '../utils/logger.js';
 import { verifyToken } from '../middleware/auth.js';
 import prisma from '../services/prisma.js';
+import { getCpuUsage, getMemoryUsage, getProcessMemory } from '../utils/systemMetrics.js';
 
 const log = createLogger('origin:api');
 
@@ -20,9 +21,35 @@ const log = createLogger('origin:api');
  * @param {object}      deps.state        – shared origin state (broadcasts, rtpCapabilities)
  */
 export function registerOriginRoutes({ app, config, redisClient, state }) {
-  // Health
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'healthy', role: 'ORIGIN' });
+  // Liveness probe - simple check that process is alive (no dependencies)
+  app.get('/health/live', (_req, res) => {
+    res.status(200).json({
+      status: 'alive',
+      role: 'ORIGIN',
+      uptime: Math.round(process.uptime()),
+      timestamp: Date.now(),
+    });
+  });
+
+  // Readiness/Health probe - detailed check with dependencies
+  app.get('/health', async (_req, res) => {
+    try {
+      const edges = await redisClient.getAllEdges();
+      const broadcasts = await redisClient.getAllBroadcasts();
+      res.json({
+        status: 'healthy',
+        role: 'ORIGIN',
+        uptime: Math.round(process.uptime()),
+        memory: getProcessMemory(),
+        systemMemory: getMemoryUsage(),
+        edges: edges.length,
+        activeBroadcasts: broadcasts.length,
+        totalViewers: broadcasts.reduce((s, b) => s + (b.viewerCount || 0), 0),
+        timestamp: Date.now(),
+      });
+    } catch {
+      res.json({ status: 'healthy', role: 'ORIGIN', uptime: Math.round(process.uptime()) });
+    }
   });
 
   // Stats

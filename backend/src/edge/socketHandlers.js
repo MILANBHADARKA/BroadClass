@@ -3,7 +3,7 @@ import { createLogger } from '../utils/logger.js';
 const log = createLogger('edge:socket');
 
 /**
- * @param {object}  deps
+ * @param {object}  deps  
  * @param {object}  deps.io         – Socket.IO server
  * @param {object}  deps.config
  * @param {object}  deps.edgeState  – shared edge state

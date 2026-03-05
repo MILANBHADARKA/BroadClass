@@ -14,17 +14,17 @@ const log = createLogger('auth');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-broadcast-jwt-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-// ── Create Token ──────────────────────────────────────────────
+// Create Token 
 export function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
-// ── Verify & Decode ───────────────────────────────────────────
+//  Verify & Decode 
 export function decodeToken(token) {
   return jwt.verify(token, JWT_SECRET);
 }
 
-// ── Express Middleware: Verify Token ──────────────────────────
+//  Express Middleware: Verify Token 
 // Reads JWT from HttpOnly cookie first, falls back to Authorization header
 export function verifyToken(req, res, next) {
   let token = req.cookies?.token; // HttpOnly cookie (preferred)
@@ -49,7 +49,7 @@ export function verifyToken(req, res, next) {
   }
 }
 
-// ── Express Middleware: Require Role ──────────────────────────
+// Express Middleware: Require Role 
 export function verifyRole(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user) {
@@ -62,7 +62,7 @@ export function verifyRole(...allowedRoles) {
   };
 }
 
-// ── Socket.IO Middleware: Verify Token ────────────────────────
+// ─ Socket.IO Middleware: Verify Token 
 // Reads from handshake auth.token first, then falls back to cookie
 export function socketAuthMiddleware(socket, next) {
   let token = socket.handshake.auth?.token;

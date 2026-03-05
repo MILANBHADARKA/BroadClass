@@ -24,6 +24,8 @@ yarn-debug.log*
 COMPLETE_FILE_MANIFEST.md
 yarn-error.log*
 pnpm-debug.log*
+PRODUCTION_READINESS_AUDIT.md
+docs
 lerna-debug.log*
 docker-logs-origin.txt
 

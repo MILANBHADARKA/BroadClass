@@ -19,5 +19,6 @@ export const edgeConfig = {
   healthCheckInterval: parseInt(process.env.HEALTH_CHECK_INTERVAL) || 10000,
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   region: process.env.REGION || 'UNKNOWN',
+  internalApiKey: process.env.INTERNAL_API_KEY || 'broadclass-internal-key-change-in-production',
   role: 'EDGE',
 };

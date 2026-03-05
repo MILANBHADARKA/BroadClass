@@ -7,7 +7,7 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    command: 
+    command:              
       - redis-server
       - --appendonly
       - "yes"
@@ -24,7 +24,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - mediarooms-network
+      - broadclass-network
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-broadcast123}
 
@@ -33,7 +33,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: mediarooms-origin
+    container_name: broadclass-origin
     ports:
       - "3001:3001"
       - "40000-40099:40000-40099/udp"
@@ -42,12 +42,24 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - ROLE=ORIGIN
       - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - REDIS_URL=${REDIS_URL}
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
       - JWT_EXPIRES_IN=7d
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
       - ENABLE_SIMULCAST=true
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
+      - AUTO_SCALE_ENABLED=${AUTO_SCALE_ENABLED:-false}
+      - AUTO_SCALE_PROVIDER=${AUTO_SCALE_PROVIDER:-docker}
+      - AUTO_SCALE_MIN_EDGES=${AUTO_SCALE_MIN_EDGES:-2}
+      - AUTO_SCALE_MAX_EDGES=${AUTO_SCALE_MAX_EDGES:-10}
+      - AUTO_SCALE_UP_THRESHOLD=${AUTO_SCALE_UP_THRESHOLD:-70}
+      - AUTO_SCALE_DOWN_THRESHOLD=${AUTO_SCALE_DOWN_THRESHOLD:-20}
+      - AUTO_SCALE_CHECK_INTERVAL=${AUTO_SCALE_CHECK_INTERVAL:-30000}
+      - EDGE_IMAGE_NAME=${EDGE_IMAGE_NAME:-broadclass-edge}
+      - DOCKER_NETWORK_NAME=broadclass_broadclass-network
+      - EDGE_BASE_HTTP_PORT=${EDGE_BASE_HTTP_PORT:-3010}
+      - EDGE_BASE_RTP_PORT=${EDGE_BASE_RTP_PORT:-60000}
       - LOG_LEVEL=warn
       - NUM_WORKERS=4
       - RTC_MIN_PORT=40000
@@ -56,18 +68,25 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    stop_grace_period: 15s
     networks:
-      - mediarooms-network
+      - broadclass-network
 
   # Edge Server 1
   edge-server-1:
     build:
       context: ./backend
       dockerfile: Dockerfile.edge
-    container_name: mediarooms-edge-1
+    container_name: broadclass-edge-1
     ports:
       - "3002:3002"
-      - "50000-50099:50000-50099/udp"
+      - "50000-50399:50000-50399/udp"
     environment:
       - PORT=3002
       - EXTERNAL_PORT=3002
@@ -78,31 +97,35 @@ services:
       - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
       - ORIGIN_IP=origin-server
       - ORIGIN_PORT=3001
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=warn
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=50000
-      - RTC_MAX_PORT=50099
+      - RTC_MAX_PORT=50399
     depends_on:
       redis:
         condition: service_healthy
+      origin-server:
+        condition: service_healthy
     restart: unless-stopped
+    stop_grace_period: 10s
     networks:
-      - mediarooms-network
+      - broadclass-network
 
   # Edge Server 2
   edge-server-2:
     build:
       context: ./backend
       dockerfile: Dockerfile.edge
-    container_name: mediarooms-edge-2
+    container_name: broadclass-edge-2
     ports:
       - "3003:3002"
-      - "54000-54099:54000-54099/udp"
+      - "54000-54399:54000-54399/udp"
     environment:
       - PORT=3002
       - EXTERNAL_PORT=3003
@@ -113,31 +136,35 @@ services:
       - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
       - ORIGIN_IP=origin-server
       - ORIGIN_PORT=3001
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=warn
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=54000
-      - RTC_MAX_PORT=54099
+      - RTC_MAX_PORT=54399
     depends_on:
       redis:
         condition: service_healthy
+      origin-server:
+        condition: service_healthy
     restart: unless-stopped
+    stop_grace_period: 10s
     networks:
-      - mediarooms-network
+      - broadclass-network
 
   # Edge Server 3
   edge-server-3:
     build:
       context: ./backend
       dockerfile: Dockerfile.edge
-    container_name: mediarooms-edge-3
+    container_name: broadclass-edge-3
     ports:
       - "3004:3002"
-      - "52000-52099:52000-52099/udp"
+      - "52000-52399:52000-52399/udp"
     environment:
       - PORT=3002
       - EXTERNAL_PORT=3004
@@ -148,26 +175,30 @@ services:
       - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
       - ORIGIN_IP=origin-server
       - ORIGIN_PORT=3001
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-broadcast123}@redis:6379
+      - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=warn
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=52000
-      - RTC_MAX_PORT=52099
+      - RTC_MAX_PORT=52399
     depends_on:
       redis:
         condition: service_healthy
+      origin-server:
+        condition: service_healthy
     restart: unless-stopped
+    stop_grace_period: 10s
     networks:
-      - mediarooms-network
+      - broadclass-network
 
 volumes:
   redis-data:
     driver: local
 
 networks:
-  mediarooms-network:
+  broadclass-network:
     driver: bridge

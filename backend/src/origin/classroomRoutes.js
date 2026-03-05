@@ -22,7 +22,7 @@ const router = Router();
 // All classroom routes require authentication
 router.use(verifyToken);
 
-// ── Helpers ───────────────────────────────────────────────────
+//  Helpers 
 
 /** Generate a unique 6-char alphanumeric code */
 async function generateUniqueCode() {
@@ -34,7 +34,7 @@ async function generateUniqueCode() {
   throw new Error('Could not generate unique classroom code');
 }
 
-// ── Create Classroom (TEACHER only) ──────────────────────────
+//  Create Classroom (TEACHER only) 
 router.post('/', verifyRole('TEACHER'), async (req, res) => {
   try {
     const { name, description, subject } = req.body;
@@ -67,7 +67,7 @@ router.post('/', verifyRole('TEACHER'), async (req, res) => {
   }
 });
 
-// ── List My Classrooms ───────────────────────────────────────
+// List My Classrooms 
 router.get('/', async (req, res) => {
   try {
     if (req.user.role === 'TEACHER') {
@@ -108,7 +108,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ── Get Classroom Details ────────────────────────────────────
+// Get Classroom Details 
 router.get('/:id', async (req, res) => {
   try {
     const classroom = await prisma.classroom.findUnique({
@@ -147,7 +147,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ── Join Classroom by Code (STUDENT only) ────────────────────
+// Join Classroom by Code (STUDENT only)
 router.post('/join', verifyRole('STUDENT'), async (req, res) => {
   try {
     const { code } = req.body;
@@ -206,7 +206,7 @@ router.post('/join', verifyRole('STUDENT'), async (req, res) => {
   }
 });
 
-// ── Leave Classroom (STUDENT only) ───────────────────────────
+// Leave Classroom (STUDENT only) 
 router.delete('/:id/leave', verifyRole('STUDENT'), async (req, res) => {
   try {
     const enrollment = await prisma.enrollment.findUnique({
@@ -232,7 +232,7 @@ router.delete('/:id/leave', verifyRole('STUDENT'), async (req, res) => {
   }
 });
 
-// ── Update Classroom (TEACHER owner only) ────────────────────
+// Update Classroom (TEACHER owner only)
 router.patch('/:id', verifyRole('TEACHER'), async (req, res) => {
   try {
     const classroom = await prisma.classroom.findUnique({ where: { id: req.params.id } });
@@ -259,7 +259,7 @@ router.patch('/:id', verifyRole('TEACHER'), async (req, res) => {
   }
 });
 
-// ── Delete Classroom (TEACHER owner only) ────────────────────
+// Delete Classroom (TEACHER owner only)
 router.delete('/:id', verifyRole('TEACHER'), async (req, res) => {
   try {
     const classroom = await prisma.classroom.findUnique({ where: { id: req.params.id } });
@@ -276,7 +276,7 @@ router.delete('/:id', verifyRole('TEACHER'), async (req, res) => {
   }
 });
 
-// ── Regenerate Join Code (TEACHER owner only) ────────────────
+// Regenerate Join Code (TEACHER owner only)
 router.post('/:id/regenerate-code', verifyRole('TEACHER'), async (req, res) => {
   try {
     const classroom = await prisma.classroom.findUnique({ where: { id: req.params.id } });

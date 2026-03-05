@@ -11,12 +11,14 @@ import bcrypt from 'bcryptjs';
 import prisma from '../services/prisma.js';
 import { signToken, verifyToken } from '../middleware/auth.js';
 import { createLogger } from '../utils/logger.js';
+import { authRateLimiter, registrationRateLimiter } from '../middleware/rateLimiter.js';
+import { sanitizeEmail, sanitizeName, validatePassword } from '../utils/sanitize.js';
 
 const log = createLogger('auth:routes');
 const router = Router();
 
 const IS_PROD = process.env.NODE_ENV === 'production';
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'https://localhost:5173';
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'https://broadclass.xyz';
 const IS_LOCALHOST = FRONTEND_ORIGIN.includes('localhost') || FRONTEND_ORIGIN.includes('127.0.0.1');
 
 /** Cookie options for the JWT HttpOnly cookie */
@@ -30,8 +32,8 @@ function cookieOptions() {
   };
 }
 
-// ── Register ──────────────────────────────────────────────────
-router.post('/register', async (req, res) => {
+// Register (stricter rate limit)
+router.post('/register', registrationRateLimiter, async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -39,8 +41,23 @@ router.post('/register', async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'name, email, and password are required' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+    // Sanitize and validate email
+    const emailValidation = sanitizeEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
+    }
+
+    // Sanitize and validate name
+    const nameValidation = sanitizeName(name, 2, 100);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
     }
 
     const validRoles = ['TEACHER', 'STUDENT'];
@@ -50,7 +67,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if email already exists
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({ where: { email: emailValidation.sanitized } });
     if (existing) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -58,7 +75,12 @@ router.post('/register', async (req, res) => {
     // Hash password & create user
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role: userRole },
+      data: { 
+        name: nameValidation.sanitized, 
+        email: emailValidation.sanitized, 
+        password: hashedPassword, 
+        role: userRole 
+      },
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 
@@ -75,8 +97,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ── Login ─────────────────────────────────────────────────────
-router.post('/login', async (req, res) => {
+// Login (rate limited to prevent brute force)
+router.post('/login', authRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -84,7 +106,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'email and password are required' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    // Sanitize email input
+    const emailValidation = sanitizeEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: emailValidation.sanitized } });
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -110,13 +138,13 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ── Logout ────────────────────────────────────────────────────
+// Logout
 router.post('/logout', (_req, res) => {
   res.clearCookie('token', { httpOnly: true, path: '/' });
   res.json({ message: 'Logged out' });
 });
 
-// ── Me (protected) ────────────────────────────────────────────
+// Me (protected)
 router.get('/me', verifyToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({

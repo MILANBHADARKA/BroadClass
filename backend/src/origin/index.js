@@ -9,8 +9,11 @@ import { registerOriginSocketHandlers } from './socketHandlers.js';
 import { createLogger } from '../utils/logger.js';
 import authRoutes from './authRoutes.js';
 import classroomRoutes from './classroomRoutes.js';
+import edgeRegistryRoutes from './edgeRegistryRoutes.js';
 import { socketAuthMiddleware } from '../middleware/auth.js';
 import prisma from '../services/prisma.js';
+import { EdgeScalingManager } from './edgeScalingManager.js';
+import { validateConfig, getConfigSummary } from '../utils/validateConfig.js';
 
 const log = createLogger('origin');
 const containerIp = getContainerIp();
@@ -20,6 +23,15 @@ const broadcasts = new Map(); // roomId → broadcast object
 const state = { rtpCapabilities: null, containerIp };
 
 async function start() {
+  // Validate configuration before starting
+  try {
+    validateConfig();
+    log.info('Configuration summary:', getConfigSummary());
+  } catch (err) {
+    log.error('Configuration validation failed:', err.message);
+    process.exit(1);
+  }
+
   log.info(`
 ╔════════════════════════════════════════╗
 ║     ORIGIN SERVER CONFIGURATION        ║
@@ -67,9 +79,13 @@ async function start() {
   // 4. Express + Socket.IO
   const { app, httpServer, io } = createApp();
 
+  // Expose redisClient for route handlers via app.locals
+  app.locals.redisClient = redisClient;
+
   // Auth & Classroom REST routes
   app.use('/api/auth', authRoutes);
   app.use('/api/classrooms', classroomRoutes);
+  app.use('/api/internal', edgeRegistryRoutes);
 
   registerOriginRoutes({ app, config, redisClient, state });
 
@@ -90,27 +106,90 @@ async function start() {
     log.info('Ready to receive broadcasts and pipe to Edge servers');
   });
 
-  // 6. Graceful shutdown
-  const shutdown = async () => {
-    log.info('Shutting down...');
+  // 6. Auto-scaling (optional)
+  let scaler = null;
+
+  if (config.autoScale.enabled) {
+    const providerName = config.autoScale.provider;
+    let provider;
+
+    if (providerName === 'aws') {
+      const { AwsProvider } = await import('./providers/awsProvider.js');
+      provider = new AwsProvider(config.autoScale.aws);
+    } else {
+      const { DockerProvider } = await import('./providers/dockerProvider.js');
+      provider = new DockerProvider({
+        ...config.autoScale.docker,
+        redisUrl:       config.redisUrl,
+        jwtSecret:      process.env.JWT_SECRET || 'dev-broadcast-jwt-secret-change-in-production',
+        internalApiKey: config.internalApiKey,
+        announcedIp:    config.announcedIp,
+        originHost:     'origin-server',     // Docker network hostname
+        originPort:     config.port,
+        frontendOrigin: process.env.FRONTEND_ORIGIN || 'https://broadclass.xyz',
+        logLevel:       config.logLevel,
+        maxCapacity:    200,
+      });
+    }
+
+    scaler = new EdgeScalingManager({
+      redisClient,
+      provider,
+      config: config.autoScale,
+    });
+
+    // Expose scaler for the API routes
+    app.locals.edgeScaler = scaler;
+
+    await scaler.start();
+  }
+
+  // 7. Graceful shutdown
+  let isShuttingDown = false;
+  const shutdown = async (signal) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    log.info(`Shutting down (${signal})...`);
+
+    // Stop accepting new connections
+    httpServer.close(() => {
+      log.info('HTTP server closed');
+    });
+
+    // Stop autoscaler
+    if (scaler) await scaler.stop();
+
+    // Cleanup broadcasts
     broadcasts.forEach((b) => {
       b.producers.forEach((p) => { try { p.close(); } catch (_) {} });
       try { b.router.close(); } catch (_) {}
     });
+
+    // Cleanup workers
     workers.forEach((w) => { try { w.close(); } catch (_) {} });
+
+    // Disconnect services
     await prisma.$disconnect();
     await redisClient.disconnect();
-    httpServer.close(() => {
-      log.info('Origin server stopped');
-      process.exit(0);
-    });
+
+    log.info('Origin server stopped');
+    process.exit(0);
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  // Force exit after 15s if graceful shutdown hangs
+  const forceExit = (signal) => {
+    shutdown(signal);
+    setTimeout(() => {
+      log.warn('Forced shutdown after timeout');
+      process.exit(1);
+    }, 15000).unref();
+  };
+
+  process.on('SIGINT', () => forceExit('SIGINT'));
+  process.on('SIGTERM', () => forceExit('SIGTERM'));
 }
 
 start().catch((err) => {
-  log.error('Failed to start Origin server:', err);
+  log.error('Failed to start Origin server:', err.message || err, err.stack || '');
   process.exit(1);
 });

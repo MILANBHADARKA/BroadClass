@@ -2,6 +2,10 @@
  * Redis Client – Centralized Redis operations
  * Handles: Edge health tracking, load balancing data, broadcast management,
  * user sessions, and monitoring statistics.
+ * 
+ * Supports both local Redis and Upstash (TLS) connections.
+ * - Local: redis://localhost:6379
+ * - Upstash: rediss://default:PASSWORD@hostname.upstash.io:6379
  */
 
 import redis from 'redis';
@@ -18,7 +22,10 @@ export class RedisClient {
   // Connection
 
   async connect(redisUrl = 'redis://localhost:6379') {
-    this.client = redis.createClient({
+    // Detect TLS from URL scheme (rediss://)
+    const useTls = redisUrl.startsWith('rediss://');
+    
+    const clientConfig = {
       url: redisUrl,
       socket: {
         reconnectStrategy: (retries) => {
@@ -27,19 +34,28 @@ export class RedisClient {
             log.error('Reconnection failed after 10 attempts');
             return new Error('Redis reconnection failed');
           }
-          return Math.min(retries * 50, 500);
+          return Math.min(retries * 100, 3000);
         },
+        connectTimeout: 10000,
       },
-    });
+    };
 
+    // Enable TLS for Upstash (rediss://)
+    if (useTls) {
+      clientConfig.socket.tls = true;
+      log.info('TLS enabled for Redis connection (Upstash)');
+    }
+
+    this.client = redis.createClient(clientConfig);
     this.subscriber = this.client.duplicate();
 
-    this.client.on('error', (err) => log.error('Client error:', err));
+    this.client.on('error', (err) => log.error('Client error:', err.message));
     this.client.on('connect', () => log.info('Connected'));
+    this.client.on('reconnecting', () => log.warn('Reconnecting...'));
 
     await this.client.connect();
     await this.subscriber.connect();
-    log.info('Initialized successfully');
+    log.info(`Initialized successfully (TLS: ${useTls})`);
   }
 
   async disconnect() {
@@ -86,7 +102,7 @@ export class RedisClient {
     return key;
   }
 
-  async updateEdgeHeartbeat(serverId, userCount) {
+  async updateEdgeHeartbeat(serverId, userCount, metrics = {}) {
     const key = `edge:${serverId}`;
     const data = await this.client.get(key);
     if (!data) {
@@ -98,6 +114,8 @@ export class RedisClient {
     edge.userCount = userCount;
     edge.lastHeartbeat = Date.now();
     edge.loadPercentage = (userCount / edge.maxCapacity) * 100;
+    if (metrics.cpuUsage !== undefined) edge.cpuUsage = metrics.cpuUsage;
+    if (metrics.memoryUsage !== undefined) edge.memoryUsage = metrics.memoryUsage;
 
     await this.client.setEx(key, 30, JSON.stringify(edge));
     return edge;

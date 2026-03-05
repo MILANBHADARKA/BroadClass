@@ -17,11 +17,15 @@ const log = createLogger('mediasoup');
 export async function createWorkers({ numWorkers, logLevel, rtcMinPort, rtcMaxPort }) {
   log.info(`Initializing ${numWorkers} mediasoup worker(s)...`);
 
+  // mediasoup only accepts: 'debug' | 'warn' | 'error' | 'none'
+  const MEDIASOUP_LEVELS = { debug: 'debug', info: 'warn', warn: 'warn', error: 'error', none: 'none' };
+  const msLogLevel = MEDIASOUP_LEVELS[logLevel] || 'warn';
+
   const workers = [];
 
   for (let i = 0; i < numWorkers; i++) {
     const worker = await mediasoup.createWorker({
-      logLevel,
+      logLevel: msLogLevel,
       rtcMinPort,
       rtcMaxPort,
     });

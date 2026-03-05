@@ -1,4 +1,4 @@
-# MediaRooms
+# BroadClass
 
 A scalable one-to-many live classroom broadcast platform using mediasoup, Socket.IO, Express, and React. Built with modern **ES Modules (ESM)** and production-grade architecture.
 
@@ -48,7 +48,7 @@ A scalable one-to-many live classroom broadcast platform using mediasoup, Socket
    npm run dev
    ```
    
-   Frontend will run on `http://localhost:5173`
+   Frontend will run on `https://broadclass.xyz`
 
 ## Usage
 

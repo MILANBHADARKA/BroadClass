@@ -29,5 +29,5 @@ export const mediaCodecs = [
       'level-asymmetry-allowed': 1,
       'x-google-start-bitrate': 1000,
     },
-  },
+  }
 ];

@@ -8,6 +8,7 @@
  */
 
 import { createLogger } from '../utils/logger.js';
+import { getMemoryUsage, getProcessMemory } from '../utils/systemMetrics.js';
 
 const log = createLogger('edge:api');
 
@@ -18,7 +19,18 @@ const log = createLogger('edge:api');
  * @param {object}  deps.edgeState – { mainRouter, broadcasts, connectedStudents, containerIp, io }
  */
 export function registerEdgeRoutes({ app, config, edgeState }) {
-  // Health
+  // Liveness probe - simple check that process is alive (no dependencies)
+  app.get('/health/live', (_req, res) => {
+    res.status(200).json({
+      status: 'alive',
+      role: 'EDGE',
+      serverId: config.serverId,
+      uptime: Math.round(process.uptime()),
+      timestamp: Date.now(),
+    });
+  });
+
+  // Readiness/Health probe - detailed check
   app.get('/health', (_req, res) => {
     res.json({
       status: 'healthy',
@@ -28,6 +40,11 @@ export function registerEdgeRoutes({ app, config, edgeState }) {
       maxCapacity: config.maxCapacity,
       loadPercentage: ((edgeState.connectedStudents / config.maxCapacity) * 100).toFixed(2),
       activeBroadcasts: edgeState.broadcasts.size,
+      uptime: Math.round(process.uptime()),
+      memory: getProcessMemory(),
+      systemMemory: getMemoryUsage(),
+      region: config.region,
+      timestamp: Date.now(),
     });
   });
 
