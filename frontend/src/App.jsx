@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import ClassroomDetail from './pages/ClassroomDetail';
+import { Analytics } from "@vercel/analytics/react"
 
 /** Redirect authenticated users away from login/register */
 function PublicRoute({ children }) {
@@ -51,6 +52,7 @@ function App() {
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>
+      <Analytics />
     </BrowserRouter>
   );
 }
