@@ -126,15 +126,12 @@ export function validateConfig() {
       );
     }
 
-    // AWS provider specific validation
-    const provider = process.env.AUTO_SCALE_PROVIDER || 'docker';
-    if (provider === 'aws') {
-      if (!process.env.AWS_ASG_NAME) {
-        errors.push('AWS_ASG_NAME is required when using AWS auto-scaling provider');
-      }
-      if (!process.env.AWS_REGION) {
-        warnings.push('AWS_REGION not set, will use default region');
-      }
+    // AWS ASG validation
+    if (!process.env.AWS_ASG_NAME) {
+      errors.push('AWS_ASG_NAME is required when auto-scaling is enabled');
+    }
+    if (!process.env.AWS_REGION) {
+      warnings.push('AWS_REGION not set, will use default region (ap-south-1)');
     }
   }
 
@@ -180,7 +177,6 @@ export function getConfigSummary() {
     hasRedis: !!process.env.REDIS_URL,
     redisTls: (process.env.REDIS_URL || '').startsWith('rediss://'),
     autoScaleEnabled: process.env.AUTO_SCALE_ENABLED === 'true',
-    autoScaleProvider: process.env.AUTO_SCALE_PROVIDER || 'docker',
     rtcPortRange: `${process.env.RTC_MIN_PORT || '40000'}-${process.env.RTC_MAX_PORT || '49999'}`,
   };
 }

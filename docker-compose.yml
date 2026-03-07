@@ -1,12 +1,15 @@
 services:
-  # Redis - The Brain (Tracks Edge servers and load)
+  # ─────────────────────────────────────────────────────────────────────
+  # LOCAL REDIS (OPTIONAL)
+  # Only needed if NOT using cloud Redis (Upstash).
+  # To use: docker-compose --profile local-redis up
+  # ─────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: broadcast-redis
+    profiles: ["local-redis"]
     ports:
       - "6379:6379"
-    volumes:
-      - redis-data:/data
     command:              
       - redis-server
       - --appendonly
@@ -49,24 +52,14 @@ services:
       - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
       - ENABLE_SIMULCAST=true
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
-      - AUTO_SCALE_ENABLED=${AUTO_SCALE_ENABLED:-false}
-      - AUTO_SCALE_PROVIDER=${AUTO_SCALE_PROVIDER:-docker}
-      - AUTO_SCALE_MIN_EDGES=${AUTO_SCALE_MIN_EDGES:-2}
-      - AUTO_SCALE_MAX_EDGES=${AUTO_SCALE_MAX_EDGES:-10}
-      - AUTO_SCALE_UP_THRESHOLD=${AUTO_SCALE_UP_THRESHOLD:-70}
-      - AUTO_SCALE_DOWN_THRESHOLD=${AUTO_SCALE_DOWN_THRESHOLD:-20}
-      - AUTO_SCALE_CHECK_INTERVAL=${AUTO_SCALE_CHECK_INTERVAL:-30000}
-      - EDGE_IMAGE_NAME=${EDGE_IMAGE_NAME:-broadclass-edge}
-      - DOCKER_NETWORK_NAME=broadclass_broadclass-network
-      - EDGE_BASE_HTTP_PORT=${EDGE_BASE_HTTP_PORT:-3010}
-      - EDGE_BASE_RTP_PORT=${EDGE_BASE_RTP_PORT:-60000}
       - LOG_LEVEL=warn
-      - NUM_WORKERS=4
+      - NUM_WORKERS=2
       - RTC_MIN_PORT=40000
       - RTC_MAX_PORT=40099
-    depends_on:
-      redis:
-        condition: service_healthy
+    # Uncomment if using local Redis:
+    # depends_on:
+    #   redis:
+    #     condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
@@ -108,8 +101,6 @@ services:
       - RTC_MIN_PORT=50000
       - RTC_MAX_PORT=50399
     depends_on:
-      redis:
-        condition: service_healthy
       origin-server:
         condition: service_healthy
     restart: unless-stopped
@@ -147,8 +138,6 @@ services:
       - RTC_MIN_PORT=54000
       - RTC_MAX_PORT=54399
     depends_on:
-      redis:
-        condition: service_healthy
       origin-server:
         condition: service_healthy
     restart: unless-stopped
@@ -186,8 +175,6 @@ services:
       - RTC_MIN_PORT=52000
       - RTC_MAX_PORT=52399
     depends_on:
-      redis:
-        condition: service_healthy
       origin-server:
         condition: service_healthy
     restart: unless-stopped
@@ -195,9 +182,10 @@ services:
     networks:
       - broadclass-network
 
-volumes:
-  redis-data:
-    driver: local
+# Uncomment if using local Redis:
+# volumes:
+#   redis-data:
+#     driver: local
 
 networks:
   broadclass-network:

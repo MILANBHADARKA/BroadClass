@@ -7,6 +7,14 @@ requrements.txt
 .env 
 .env.*
 
+backend/aws
+
+full_code.txt
+
+full_project_code.txt
+
+requirements.md
+
 # Logs
 logs
 *.log

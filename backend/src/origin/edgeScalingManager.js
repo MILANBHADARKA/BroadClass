@@ -5,20 +5,17 @@
  *   - Scales UP when any edge exceeds the load threshold
  *   - Scales DOWN when ALL edges are below the low-water mark (only removes empty edges)
  *   - Respects min/max edge counts and cooldown periods
- *   - Only manages edges it created — static (docker-compose) edges are never touched
  *
- * Uses a pluggable "provider" interface:
- *   - DockerProvider  →  local development (creates sibling containers)
- *   - AwsProvider     →  production (adjusts ASG desired capacity)
+ * Uses AWS Auto Scaling Group (ASG) via AwsProvider to adjust desired capacity.
  */
 
 import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('autoscaler');
 
-/* ------------------------------------------------------------------ */
+/*  */
 /*  Redis keys used for scaling state persistence                     */
-/* ------------------------------------------------------------------ */
+/*  */
 const REDIS_MANAGED_SET = 'autoscaler:managed-edges';   // SET of serverId strings
 const REDIS_NEXT_NUM    = 'autoscaler:next-edge-number'; // counter
 
@@ -26,7 +23,7 @@ export class EdgeScalingManager {
   /**
    * @param {object}        opts
    * @param {RedisClient}   opts.redisClient   – shared Redis wrapper
-   * @param {object}        opts.provider      – DockerProvider | AwsProvider
+   * @param {object}        opts.provider      – AwsProvider instance
    * @param {object}        opts.config        – scaling knobs (see defaults below)
    */
   constructor({ redisClient, provider, config = {} }) {

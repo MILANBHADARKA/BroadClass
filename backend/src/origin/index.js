@@ -106,31 +106,12 @@ async function start() {
     log.info('Ready to receive broadcasts and pipe to Edge servers');
   });
 
-  // 6. Auto-scaling (optional)
+  // 6. Auto-scaling (optional - AWS only)
   let scaler = null;
 
   if (config.autoScale.enabled) {
-    const providerName = config.autoScale.provider;
-    let provider;
-
-    if (providerName === 'aws') {
-      const { AwsProvider } = await import('./providers/awsProvider.js');
-      provider = new AwsProvider(config.autoScale.aws);
-    } else {
-      const { DockerProvider } = await import('./providers/dockerProvider.js');
-      provider = new DockerProvider({
-        ...config.autoScale.docker,
-        redisUrl:       config.redisUrl,
-        jwtSecret:      process.env.JWT_SECRET || 'dev-broadcast-jwt-secret-change-in-production',
-        internalApiKey: config.internalApiKey,
-        announcedIp:    config.announcedIp,
-        originHost:     'origin-server',     // Docker network hostname
-        originPort:     config.port,
-        frontendOrigin: process.env.FRONTEND_ORIGIN || 'https://broadclass.xyz',
-        logLevel:       config.logLevel,
-        maxCapacity:    200,
-      });
-    }
+    const { AwsProvider } = await import('./providers/awsProvider.js');
+    const provider = new AwsProvider(config.autoScale.aws);
 
     scaler = new EdgeScalingManager({
       redisClient,
