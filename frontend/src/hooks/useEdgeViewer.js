@@ -22,10 +22,26 @@ export default function useEdgeViewer({ device, onJoinBroadcast, authToken }) {
       const bestEdge = await onJoinBroadcast(roomId);
       setEdgeInfo(bestEdge);
 
-      const edgeUrl = `http://${bestEdge.ip}:${bestEdge.port}`;
-      const newEdgeSocket = io(edgeUrl, {
-        auth: authToken ? { token: authToken } : undefined,
-      });
+      // Get base API URL from environment
+      const apiUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+      const isSecure = apiUrl.startsWith('https://');
+
+      // Production: Route through Nginx reverse proxy (SSL termination)
+      // Development: Connect directly to edge IP:port
+      let newEdgeSocket;
+      if (isSecure) {
+        // Connect via Nginx: https://api.broadclass.xyz/edge/3002/socket.io/
+        newEdgeSocket = io(apiUrl, {
+          path: `/edge/${bestEdge.port}/socket.io/`,
+          auth: authToken ? { token: authToken } : undefined,
+        });
+      } else {
+        // Direct connection for local dev
+        const edgeUrl = `http://${bestEdge.ip}:${bestEdge.port}`;
+        newEdgeSocket = io(edgeUrl, {
+          auth: authToken ? { token: authToken } : undefined,
+        });
+      }
 
       newEdgeSocket.on('connect', async () => {
         edgeSocketRef.current = newEdgeSocket;
