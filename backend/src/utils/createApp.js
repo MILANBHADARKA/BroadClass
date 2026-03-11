@@ -17,6 +17,10 @@ const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'https://broadclass.xyz';
  */
 export function createApp() {
   const app = express();
+
+  // Trust ALB/proxy X-Forwarded-For header (required for express-rate-limit behind ALB)
+  app.set('trust proxy', 1);
+
   const httpServer = createServer(app);
   const io = new SocketIO(httpServer, {
     cors: {
