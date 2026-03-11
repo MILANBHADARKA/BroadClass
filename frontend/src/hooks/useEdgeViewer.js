@@ -30,9 +30,10 @@ export default function useEdgeViewer({ device, onJoinBroadcast, authToken }) {
       // Development: Connect directly to edge IP:port
       let newEdgeSocket;
       if (isSecure) {
-        // Connect via Nginx: https://api.broadclass.xyz/edge/3002/socket.io/
+        // Route edge Socket.IO through the origin's HTTP proxy (HTTPS → VPC-internal HTTP)
+        // Path: /edge/:serverId/socket.io/ — proxied to edge's private IP on origin
         newEdgeSocket = io(apiUrl, {
-          path: `/edge/${bestEdge.port}/socket.io/`,
+          path: `/edge/${bestEdge.serverId}/socket.io/`,
           auth: authToken ? { token: authToken } : undefined,
         });
       } else {

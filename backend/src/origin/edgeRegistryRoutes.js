@@ -52,6 +52,12 @@ router.post('/register-edge', async (req, res) => {
       region: region || 'UNKNOWN',
     });
 
+    // Keep in-memory proxy registry warm
+    const edgeRegistry = req.app.locals.edgeRegistry;
+    if (edgeRegistry) {
+      edgeRegistry.set(serverId, { internalHost: internalHost || ip, internalPort: internalPort || port || 3002 });
+    }
+
     log.info(`Edge registered via API: ${serverId} (${ip}:${port})`);
     res.json({ success: true, serverId, message: 'Edge registered' });
   } catch (err) {
@@ -78,6 +84,12 @@ router.post('/heartbeat', async (req, res) => {
     if (!edge) {
       // Edge not found in Redis — tell it to re-register
       return res.status(404).json({ error: 'Edge not found, please re-register', reRegister: true });
+    }
+
+    // Keep in-memory proxy registry warm
+    const edgeRegistry = req.app.locals.edgeRegistry;
+    if (edgeRegistry && edge.internalHost) {
+      edgeRegistry.set(serverId, { internalHost: edge.internalHost, internalPort: edge.internalPort || 3002 });
     }
 
     res.json({ success: true, serverId });

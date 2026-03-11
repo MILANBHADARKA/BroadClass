@@ -113,6 +113,7 @@ export default function ClassroomDetail() {
         return {
           ip: edgeData.edgeIp,
           port: edgeData.edgePort,
+          serverId: edgeData.serverId,
           rtcCapabilities: edgeData.rtcCapabilities,
           isOrigin: edgeData.isOrigin || false,
           load: edgeData.load,
