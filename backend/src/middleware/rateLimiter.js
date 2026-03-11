@@ -66,3 +66,22 @@ export const apiRateLimiter = rateLimit({
     return process.env.NODE_ENV === 'development' && process.env.DISABLE_RATE_LIMIT === 'true';
   }
 });
+
+/**
+ * Rate limiter for the load-balancer endpoint (/api/best-server).
+ * Students hit this once per broadcast join; 60/min is generous.
+ */
+export const bestServerRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: 'Too many server-lookup requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    log.warn(`best-server rate limit exceeded for IP ${req.ip}`);
+    res.status(429).json({ error: 'Too many server-lookup requests, please slow down' });
+  },
+  skip: (req) => {
+    return process.env.NODE_ENV === 'development' && process.env.DISABLE_RATE_LIMIT === 'true';
+  },
+});

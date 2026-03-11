@@ -9,7 +9,10 @@ requrements.txt
 
 backend/aws
 
+tillnow.txt
 full_code.txt
+
+prompts/
 
 full_project_code.txt
 
@@ -18,6 +21,7 @@ requirements.md
 # Logs
 logs
 *.log
+broadclass-load-test
 README_FANOUT.md
 
 

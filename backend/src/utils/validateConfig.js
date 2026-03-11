@@ -80,6 +80,22 @@ export function validateConfig() {
         'FRONTEND_ORIGIN should use HTTPS in production (unless behind a proxy)'
       );
     }
+
+    // ANNOUNCED_IP validation — must be a real public IP in production
+    const announcedIp = process.env.ANNOUNCED_IP || '';
+    if (
+      !announcedIp ||
+      announcedIp === '127.0.0.1' ||
+      announcedIp === 'localhost' ||
+      announcedIp.startsWith('192.168.') ||
+      announcedIp.startsWith('10.')
+    ) {
+      errors.push(
+        'ANNOUNCED_IP must be set to the public IP of this EC2 instance in production ' +
+        '(not 127.0.0.1, localhost, or a private range). ' +
+        'Use $(curl -s http://169.254.169.254/latest/meta-data/public-ipv4) in user-data.'
+      );
+    }
   }
 
   // General validations (all environments)
@@ -98,9 +114,16 @@ export function validateConfig() {
   }
   // Port count is inclusive: 50000-50099 = 100 ports
   const portCount = rtcMaxPort - rtcMinPort + 1;
+  const numWorkers = parseInt(process.env.NUM_WORKERS || '2', 10);
+  const minRequiredPorts = numWorkers * 100;
   if (portCount < 100) {
     warnings.push(
       `RTC port range is small (${portCount} ports), may limit concurrent broadcasts`
+    );
+  } else if (portCount < minRequiredPorts) {
+    warnings.push(
+      `RTC port range (${portCount} ports) may be too small for ${numWorkers} worker(s). ` +
+      `Recommended minimum: ${minRequiredPorts} ports (NUM_WORKERS × 100)`
     );
   }
 

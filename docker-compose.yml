@@ -2,7 +2,7 @@ services:
   # ─────────────────────────────────────────────────────────────────────
   # LOCAL REDIS (OPTIONAL)
   # Only needed if NOT using cloud Redis (Upstash).
-  # To use: docker-compose --profile local-redis up
+  # To use: docker compose --profile local-redis up
   # ─────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
@@ -39,7 +39,7 @@ services:
     container_name: broadclass-origin
     ports:
       - "3001:3001"
-      - "40000-40099:40000-40099/udp"
+      - "40000-40399:40000-40399/udp"
     environment:
       - PORT=3001
       - NODE_ENV=${NODE_ENV:-production}
@@ -49,25 +49,26 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
       - JWT_EXPIRES_IN=7d
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - ENABLE_SIMULCAST=true
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
       - LOG_LEVEL=warn
       - NUM_WORKERS=2
       - RTC_MIN_PORT=40000
-      - RTC_MAX_PORT=40099
+      - RTC_MAX_PORT=40399
     # Uncomment if using local Redis:
     # depends_on:
     #   redis:
     #     condition: service_healthy
     restart: unless-stopped
+    stop_grace_period: 40s
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 15s
-    stop_grace_period: 15s
+
     networks:
       - broadclass-network
 
@@ -182,7 +183,6 @@ services:
     networks:
       - broadclass-network
 
-# Uncomment if using local Redis:
 # volumes:
 #   redis-data:
 #     driver: local

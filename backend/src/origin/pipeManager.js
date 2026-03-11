@@ -32,13 +32,34 @@ export async function connectEdgeServers(roomId, broadcasts, redisClient, contai
 
   for (const edge of edges) {
     try {
-      await pipeToEdge(roomId, edge, broadcasts, containerIp);
+      await pipeToEdgeWithRetry(roomId, edge, broadcasts, containerIp);
     } catch (err) {
-      log.error(`Error piping to ${edge.serverId}: ${err.message}`);
+      log.error(`Skipping ${edge.serverId} after all retries failed: ${err.message}`);
     }
   }
 
   log.info(`Piping complete for ${roomId}. Edges: ${broadcast.edgeServers.join(', ') || 'none'}`);
+}
+
+/**
+ * Retry wrapper for pipeToEdge with exponential backoff.
+ * Skips the edge permanently after maxAttempts failures.
+ */
+async function pipeToEdgeWithRetry(roomId, edgeInfo, broadcasts, containerIp, maxAttempts = 3) {
+  const delays = [500, 1000, 2000];
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      await pipeToEdge(roomId, edgeInfo, broadcasts, containerIp);
+      return;
+    } catch (err) {
+      if (attempt === maxAttempts - 1) throw err;
+      log.warn(
+        `Pipe attempt ${attempt + 1}/${maxAttempts} to ${edgeInfo.serverId} failed: ${err.message}. ` +
+        `Retrying in ${delays[attempt]}ms...`,
+      );
+      await new Promise((r) => setTimeout(r, delays[attempt]));
+    }
+  }
 }
 
 /**
@@ -116,7 +137,12 @@ async function pipeToEdge(roomId, edgeInfo, broadcasts, containerIp) {
     const produceData = await produceRes.json();
     log.info(`    Edge virtual producers created:`, produceData.producers);
 
-    // 6. Store pipe info
+    // 6. Store pipe info — close any pre-existing pipe to this edge first (re-broadcast case)
+    const existing = broadcast.pipeTransports.get(edgeInfo.serverId);
+    if (existing) {
+      try { existing.transport.close(); } catch (_) {}
+      broadcast.edgeServers = broadcast.edgeServers.filter((id) => id !== edgeInfo.serverId);
+    }
     broadcast.pipeTransports.set(edgeInfo.serverId, {
       transport: pipeTransport,
       edgeInfo,
@@ -129,6 +155,31 @@ async function pipeToEdge(roomId, edgeInfo, broadcasts, containerIp) {
     pipeTransport.close();
     throw err;
   }
+}
+
+/**
+ * Tear down the pipe to a single edge (e.g. edge went offline mid-broadcast).
+ * Closes the origin-side pipe transport, notifies the edge, and removes it
+ * from the broadcast's active edge list.
+ */
+export async function cleanupSingleEdgePipe(roomId, edgeServerId, broadcasts) {
+  const broadcast = broadcasts.get(roomId);
+  if (!broadcast) return;
+
+  const pipeInfo = broadcast.pipeTransports.get(edgeServerId);
+  if (!pipeInfo) return;
+
+  const edgeUrl = `http://${pipeInfo.edgeInfo.internalHost}:${pipeInfo.edgeInfo.internalPort}`;
+  fetch(`${edgeUrl}/api/pipe-cleanup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roomId }),
+  }).catch((e) => log.error(`Cleanup notify to ${edgeServerId} failed: ${e.message}`));
+
+  try { pipeInfo.transport.close(); } catch (_) {}
+  broadcast.pipeTransports.delete(edgeServerId);
+  broadcast.edgeServers = broadcast.edgeServers.filter((id) => id !== edgeServerId);
+  log.info(`Cleaned up single edge pipe: ${roomId} → ${edgeServerId}`);
 }
 
 /**

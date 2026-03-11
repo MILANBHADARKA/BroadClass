@@ -8,6 +8,7 @@
 
 import { createLogger } from '../utils/logger.js';
 import { verifyToken } from '../middleware/auth.js';
+import { bestServerRateLimiter } from '../middleware/rateLimiter.js';
 import prisma from '../services/prisma.js';
 import { getCpuUsage, getMemoryUsage, getProcessMemory } from '../utils/systemMetrics.js';
 
@@ -63,7 +64,7 @@ export function registerOriginRoutes({ app, config, redisClient, state }) {
   });
 
   // Load Balancer – Best Edge (protected)
-  app.get('/api/best-server', verifyToken, async (req, res) => {
+  app.get('/api/best-server', bestServerRateLimiter, verifyToken, async (req, res) => {
     try {
       const { roomId } = req.query;
       if (!roomId) return res.status(400).json({ error: 'roomId query parameter required' });

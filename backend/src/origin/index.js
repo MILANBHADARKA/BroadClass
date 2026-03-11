@@ -130,7 +130,9 @@ async function start() {
   const shutdown = async (signal) => {
     if (isShuttingDown) return;
     isShuttingDown = true;
-    log.info(`Shutting down (${signal})...`);
+
+    const activeBroadcasts = broadcasts.size;
+    log.info(`Shutting down (${signal}) — ${activeBroadcasts} active broadcast(s) will be terminated`);
 
     // Stop accepting new connections
     httpServer.close(() => {
@@ -140,7 +142,27 @@ async function start() {
     // Stop autoscaler
     if (scaler) await scaler.stop();
 
-    // Cleanup broadcasts
+    // Wait up to 30s for active broadcasts to drain naturally before force-closing
+    if (activeBroadcasts > 0) {
+      log.info(`Waiting up to 30s for ${activeBroadcasts} broadcast(s) to drain...`);
+      await new Promise((resolve) => {
+        const deadline = setTimeout(resolve, 30_000);
+        const check = setInterval(() => {
+          if (broadcasts.size === 0) {
+            clearInterval(check);
+            clearTimeout(deadline);
+            resolve();
+          }
+        }, 1_000);
+      });
+      if (broadcasts.size > 0) {
+        log.warn(`${broadcasts.size} broadcast(s) still active after drain window, forcing close`);
+      } else {
+        log.info('All broadcasts drained cleanly');
+      }
+    }
+
+    // Force-close any remaining broadcasts
     broadcasts.forEach((b) => {
       b.producers.forEach((p) => { try { p.close(); } catch (_) {} });
       try { b.router.close(); } catch (_) {}
@@ -157,13 +179,13 @@ async function start() {
     process.exit(0);
   };
 
-  // Force exit after 15s if graceful shutdown hangs
+  // Force exit after 35s if graceful shutdown hangs (5s buffer over the 30s drain window)
   const forceExit = (signal) => {
     shutdown(signal);
     setTimeout(() => {
       log.warn('Forced shutdown after timeout');
       process.exit(1);
-    }, 15000).unref();
+    }, 35_000).unref();
   };
 
   process.on('SIGINT', () => forceExit('SIGINT'));

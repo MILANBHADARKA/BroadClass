@@ -25,7 +25,7 @@ COPY . .
 RUN npx prisma generate
 
 # Expose ports
-EXPOSE 3001 40000-40099/udp
+EXPOSE 3001 40000-40399/udp
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

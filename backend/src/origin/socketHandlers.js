@@ -44,6 +44,11 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
     if (!broadcast || broadcast.broadcasterId !== broadcasterId) return;
 
     log.info(`Cleaning up broadcast: ${roomId}`);
+
+    // Cancel any pending grace timer
+    const grace = broadcasterGraceTimers.get(roomId);
+    if (grace) { clearTimeout(grace.timer); broadcasterGraceTimers.delete(roomId); }
+
     if (broadcast.pipeTimer) clearTimeout(broadcast.pipeTimer);
 
     await cleanupPipes(broadcast);
@@ -55,8 +60,14 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
     await redisClient.endBroadcast(roomId);
 
     log.info(`Broadcast cleaned up: ${roomId}`);
+    io.emit('broadcastEnded', { roomId });
     io.emit('broadcastList', await getBroadcastList());
   }
+
+  // Grace timers: roomId → { timer, lostSocketId, savedResources }
+  // When a broadcaster disconnects, we wait 30s before full cleanup so the
+  // teacher can reconnect (e.g. browser refresh) without kicking all students.
+  const broadcasterGraceTimers = new Map();
 
   // Per-socket resource tracking
   const socketResources = new Map();
@@ -103,7 +114,23 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
           }
 
           if (broadcast?.broadcasterId && broadcast.broadcasterId !== socket.id) {
-            return cb({ error: `Room "${roomId}" already has a broadcaster` });
+            // Allow reconnect only if the original broadcaster disconnected within the grace window
+            const grace = broadcasterGraceTimers.get(roomId);
+            if (!grace) {
+              return cb({ error: `Room "${roomId}" already has a broadcaster` });
+            }
+            // Teacher reconnecting — cancel grace timer, reset broadcast state for fresh pipe
+            clearTimeout(grace.timer);
+            broadcasterGraceTimers.delete(roomId);
+            grace.savedResources?.producers.forEach((p) => { try { p.close(); } catch (_) {} });
+            try { grace.savedResources?.producerTransport?.close(); } catch (_) {}
+            broadcast.pipeTransports.forEach((info) => { try { info.transport.close(); } catch (_) {} });
+            broadcast.pipeTransports.clear();
+            broadcast.edgeServers = [];
+            broadcast.producers.clear();
+            broadcast.piped = false;
+            broadcast.broadcasterId = socket.id;
+            log.info(`Teacher reconnected to ${roomId} with new socket ${socket.id}, ready for re-broadcast`);
           }
 
           if (!broadcast) {
@@ -380,7 +407,24 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
 
       broadcasts.forEach((broadcast, roomId) => {
         if (broadcast.broadcasterId === socket.id) {
-          cleanupBroadcast(roomId, socket.id);
+          // Start grace window — keep the broadcast alive for 30s so the teacher
+          // can reconnect (e.g. browser refresh) without evicting all students.
+          const res = socketResources.get(socket.id);
+          const savedResources = {
+            producerTransport: res?.producerTransport ?? null,
+            producers: [...(res?.producers ?? [])],
+          };
+          // Detach from socketResources so they’re not force-closed below
+          if (res) { res.producerTransport = null; res.producers = []; }
+
+          const timer = setTimeout(() => {
+            broadcasterGraceTimers.delete(roomId);
+            savedResources.producers.forEach((p) => { try { p.close(); } catch (_) {} });
+            try { savedResources.producerTransport?.close(); } catch (_) {}
+            cleanupBroadcast(roomId, socket.id);
+          }, 30_000);
+          broadcasterGraceTimers.set(roomId, { timer, lostSocketId: socket.id, savedResources });
+          log.info(`Broadcaster disconnected from ${roomId}, 30s grace window started`);
         } else if (broadcast.viewers?.has(socket.id)) {
           const viewer = broadcast.viewers.get(socket.id);
           viewer?.consumers.forEach((c) => { try { c.close(); } catch (_) {} });

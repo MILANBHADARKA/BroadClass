@@ -41,6 +41,8 @@ async function start() {
 ╔════════════════════════════════════════╗
 ║      EDGE SERVER CONFIGURATION         ║
 ╚════════════════════════════════════════╝
+  Port: ${config.port}
+╚════════════════════════════════════════╝
   Server ID: ${config.serverId}
   Internal: ${config.internalHost}:${config.port}
   External: ${config.announcedIp}:${config.externalPort}

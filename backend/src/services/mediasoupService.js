@@ -20,21 +20,30 @@ export async function createWorkers({ numWorkers, logLevel, rtcMinPort, rtcMaxPo
   // mediasoup only accepts: 'debug' | 'warn' | 'error' | 'none'
   const MEDIASOUP_LEVELS = { debug: 'debug', info: 'warn', warn: 'warn', error: 'error', none: 'none' };
   const msLogLevel = MEDIASOUP_LEVELS[logLevel] || 'warn';
+  const workerOptions = { logLevel: msLogLevel, rtcMinPort, rtcMaxPort };
 
   const workers = [];
 
-  for (let i = 0; i < numWorkers; i++) {
-    const worker = await mediasoup.createWorker({
-      logLevel: msLogLevel,
-      rtcMinPort,
-      rtcMaxPort,
-    });
-
+  // Spawns a worker and attaches a self-healing 'died' handler that replaces
+  // the slot in the shared array instead of crashing the process.
+  async function spawnWorker(slotIndex) {
+    const worker = await mediasoup.createWorker(workerOptions);
     worker.on('died', () => {
-      log.error(`Worker ${i} died! PID: ${worker.pid}. Exiting.`);
-      process.exit(1);
+      log.error(`Worker at slot ${slotIndex} died (PID ${worker.pid}) — spawning replacement`);
+      spawnWorker(slotIndex)
+        .then((replacement) => {
+          workers[slotIndex] = replacement;
+          log.info(`Replacement worker at slot ${slotIndex} ready (PID ${replacement.pid})`);
+        })
+        .catch((err) => {
+          log.error(`Failed to replace worker at slot ${slotIndex}: ${err.message}`);
+        });
     });
+    return worker;
+  }
 
+  for (let i = 0; i < numWorkers; i++) {
+    const worker = await spawnWorker(i);
     workers.push(worker);
     log.info(`  Worker ${i} created – PID: ${worker.pid}`);
   }
@@ -50,16 +59,27 @@ export async function createWorkers({ numWorkers, logLevel, rtcMinPort, rtcMaxPo
 }
 
 /**
- * Round-robin worker selector factory.
+ * Load-aware worker selector factory.
+ * Returns the worker with the fewest active routers on each call,
+ * distributing load evenly instead of blind round-robin.
  *
  * @param {Array} workers
  * @returns {() => object} getNextWorker
  */
 export function createWorkerPool(workers) {
-  let idx = 0;
+  const routerCount = new Map();
+
   return function getNextWorker() {
-    const worker = workers[idx];
-    idx = (idx + 1) % workers.length;
-    return worker;
+    let minLoad = Infinity;
+    let best = workers[0];
+    for (const w of workers) {
+      const count = routerCount.get(w.pid) ?? 0;
+      if (count < minLoad) {
+        minLoad = count;
+        best = w;
+      }
+    }
+    routerCount.set(best.pid, (routerCount.get(best.pid) ?? 0) + 1);
+    return best;
   };
 }
