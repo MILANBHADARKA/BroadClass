@@ -11,6 +11,7 @@
  */
 import { Router } from 'express';
 import { createLogger } from '../utils/logger.js';
+import { pipeToNewEdge } from './pipeManager.js';
 
 const log = createLogger('edge-registry');
 const router = Router();
@@ -60,6 +61,17 @@ router.post('/register-edge', async (req, res) => {
 
     log.info(`Edge registered via API: ${serverId} (${ip}:${port})`);
     res.json({ success: true, serverId, message: 'Edge registered' });
+
+    // Auto-pipe any active broadcasts to this new edge (fire-and-forget)
+    const broadcasts = req.app.locals.broadcasts;
+    const state = req.app.locals.state;
+    if (broadcasts && state && broadcasts.size > 0) {
+      const edgeInfo = { serverId, ip, port, internalHost: internalHost || ip, internalPort: internalPort || port };
+      for (const [roomId] of broadcasts) {
+        pipeToNewEdge(roomId, edgeInfo, broadcasts, state.containerIp)
+          .catch((err) => log.warn(`Auto-pipe to ${serverId} for ${roomId} failed: ${err.message}`));
+      }
+    }
   } catch (err) {
     log.error('Edge registration failed:', err);
     res.status(500).json({ error: 'Registration failed: ' + err.message });

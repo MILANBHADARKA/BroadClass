@@ -125,6 +125,13 @@ export default function useEdgeViewer({ device, onJoinBroadcast, authToken }) {
             consumersRef.current.push(audioConsumer);
           }
 
+          // If no consumers were created, broadcast isn't ready on this edge yet
+          if (toResume.length === 0) {
+            console.warn('No consumers available — broadcast not yet piped to this edge');
+            newEdgeSocket.close();
+            return;
+          }
+
           // Wait for DTLS, then resume on server
           await connectedPromise;
           for (const c of toResume) {

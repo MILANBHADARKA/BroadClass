@@ -42,6 +42,24 @@ export async function connectEdgeServers(roomId, broadcasts, redisClient, contai
 }
 
 /**
+ * Pipe a single broadcast to one specific edge (e.g. a newly registered edge).
+ * Skips silently if the broadcast isn't active or is already piped to this edge.
+ */
+export async function pipeToNewEdge(roomId, edgeInfo, broadcasts, containerIp) {
+  const broadcast = broadcasts.get(roomId);
+  if (!broadcast || broadcast.producers.size === 0) {
+    log.warn(`pipeToNewEdge: no producers for ${roomId}, skipping`);
+    return;
+  }
+  if (broadcast.edgeServers?.includes(edgeInfo.serverId)) {
+    log.info(`pipeToNewEdge: ${edgeInfo.serverId} already has ${roomId}, skipping`);
+    return;
+  }
+  log.info(`Auto-piping ${roomId} to newly registered edge ${edgeInfo.serverId}`);
+  await pipeToEdgeWithRetry(roomId, edgeInfo, broadcasts, containerIp);
+}
+
+/**
  * Retry wrapper for pipeToEdge with exponential backoff.
  * Skips the edge permanently after maxAttempts failures.
  */

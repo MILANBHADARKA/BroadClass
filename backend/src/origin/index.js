@@ -82,6 +82,8 @@ async function start() {
 
   // Expose redisClient for route handlers via app.locals
   app.locals.redisClient = redisClient;
+  app.locals.broadcasts = broadcasts;
+  app.locals.state = state;
 
   // In-memory edge registry for fast synchronous lookups in the edge proxy
   const edgeRegistry = new Map();
