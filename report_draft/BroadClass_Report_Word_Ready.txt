@@ -1,0 +1,306 @@
+I. COVER PAGE
+
+Project Title: BroadClass - Scalable One-to-Many Live Classroom Broadcast Platform
+Department: Information Technology
+Institute: DDU (Faculty of Technology, Dept. of IT)
+Academic Year: 2025-2026
+Report Type: Final Year Project Report
+
+Note: This draft excludes personal identity details, signatures, and institute-issued certificate text.
+
+II. FIRST PAGE
+
+Project: BroadClass
+Submitted In Partial Fulfillment of Degree Requirements
+Department of Information Technology
+Prepared by project group under the guidance of faculty mentor.
+
+III. CANDIDATE'S DECLARATION
+
+Intentionally excluded in this draft.
+To be inserted by candidate with name, enrollment number, date, and signature.
+
+IV. COLLEGE CERTIFICATE
+
+Intentionally excluded in this draft.
+To be inserted on official letterhead signed by guide/HOD/principal.
+
+V. ACKNOWLEDGEMENT
+
+Intentionally excluded in this draft as requested.
+
+VI. TABLE OF CONTENTS
+
+Generate automatically in Word from heading styles.
+
+1. ABSTRACT
+
+BroadClass is a production-grade, low-latency, one-to-many classroom broadcasting platform built on WebRTC and SFU principles. The system is designed for educational institutions that need cost-efficient and high-quality live delivery from one teacher to many students. Instead of handling all media at a single server, BroadClass uses an Origin-Edge architecture. The Origin receives teacher media, then pipes streams to multiple Edge servers. Viewers connect to Edge servers, which enables horizontal scaling and lower congestion.
+
+The platform uses Node.js, Express, Socket.IO, mediasoup, PostgreSQL, and Redis. Frontend interaction is implemented using React and Vite. Deployment is planned on AWS services including EC2, RDS, ElastiCache, ALB, and Auto Scaling Groups. The architecture supports dynamic edge scaling, resilient teacher reconnection logic, and real-time best-edge selection for viewers.
+
+The expected performance range is 100-500 ms end-to-end latency with broadcast capacity that scales from classroom demos to large live sessions by adding edge nodes. The project contributes a practical, customizable alternative to commercial conferencing platforms for one-to-many academic streaming.
+
+2. LIST OF FIGURES
+
+Fig 4.1 Navigation Chart - User Routing Flow
+Fig 4.2 Analysis Class Diagram
+Fig 4.3 Use Case Diagram - Teacher and Student
+Fig 4.4 Sequence Diagram - Teacher Starts Broadcast
+Fig 4.5 ER Diagram
+Fig 5.1 Design Class Diagram (MVC + Services)
+Fig 5.2 Component Diagram
+Fig 5.3 Deployment Diagram
+Fig 5.4 State Transition Diagram - Broadcast Lifecycle
+
+3. LIST OF TABLES
+
+Table 1.1 Key System Metrics
+Table 1.2 Technology Stack Summary
+Table 2.1 Feasibility Study Summary
+Table 2.2 Milestones and Deliverables
+Table 3.1 Hardware and Software Requirements
+Table 3.2 Constraints and Mitigations
+Table 4.1 User and System Requirements (SRS)
+Table 4.2 Data Dictionary
+Table 5.1 Module Responsibilities
+Table 6.1 Implementation Environment
+Table 7.1 Test Strategy Matrix
+Table 7.2 Detailed Test Cases
+Table 9.1 Limitations and Enhancements
+Table 10.1 Project Viability Analysis
+
+4. ABBREVIATIONS
+
+SFU: Selective Forwarding Unit
+WebRTC: Web Real-Time Communication
+API: Application Programming Interface
+RTP: Real-time Transport Protocol
+DTLS: Datagram Transport Layer Security
+ICE: Interactive Connectivity Establishment
+ASG: Auto Scaling Group
+ALB: Application Load Balancer
+VPC: Virtual Private Cloud
+JWT: JSON Web Token
+RDS: Relational Database Service
+CDN: Content Delivery Network
+QoS: Quality of Service
+
+5. NOTATIONS
+
+Nw: Number of mediasoup workers on origin node
+Ce: Maximum viewer capacity per edge node
+Vt: Total concurrent viewers
+Ea: Active edges
+Le: Edge load percentage
+Tlat: End-to-end latency in milliseconds
+Rv: Average video bitrate per viewer
+Bo: Origin uplink bandwidth
+
+Edge requirement estimate: Ea = ceil(Vt / Ce)
+Origin uplink estimate: Bo approx Ea x Rv
+
+CHAPTER-1 INTRODUCTION
+
+1.1 Project Details
+BroadClass is a real-time educational broadcast platform for one-to-many sessions. A teacher streams once, and the platform distributes the stream to many students through SFU routing and edge fan-out. The project targets low-latency class delivery with institutional ownership of infrastructure.
+
+Table 1.1 Key System Metrics
+- Max Concurrent Viewers: 500,000+ (multi-edge architecture target)
+- End-to-End Latency: 100-500 ms
+- Quality Target: Up to 1080p @ 60 fps
+- Scale-Up Time: 2-3 min for new edge
+
+1.2 Purpose
+The purpose of BroadClass is to provide an open and cost-controlled alternative to traditional meeting platforms for classroom broadcasting.
+
+1.3 Scope
+In scope: role-based auth, classroom enrollment, teacher broadcast, viewer consume, edge routing, health monitoring.
+Out of scope: multi-origin HA, mobile app, full analytics dashboard, recording pipeline.
+
+1.4 Objective
+1) stable low-latency streaming pipeline
+2) role-based access
+3) scale viewers through edges
+4) cost-efficient cloud usage
+5) secure communication
+
+1.5 Technology and Literature Review
+Stack: Node.js, Express, Socket.IO, mediasoup, PostgreSQL, Redis, React, AWS.
+Literature basis: WebRTC standards, mediasoup docs, cloud-native scaling practices.
+
+CHAPTER-2 PROJECT MANAGEMENT
+
+2.1 Feasibility Study
+2.1.1 Technical Feasibility: Proven stack for real-time classroom media workflows.
+2.1.2 Time Schedule Feasibility: Incremental roadmap from MVP to enhanced versions.
+2.1.3 Operational Feasibility: AWS managed services and observability.
+2.1.4 Implementation Feasibility: Phased cost model supports progressive rollout.
+
+2.2 Project Planning
+2.2.1 Development Approach and Justification: Iterative, risk-controlled releases.
+2.2.2 Project Plan: Foundation, fan-out, scaling, final hardening.
+2.2.3 Milestones and Deliverables: M1 to M6 mapped to features and documentation.
+2.2.4 Roles and Responsibilities: Backend, frontend, DevOps, QA.
+2.2.5 Group Dependencies: API stability, edge registry health, test environment quality.
+
+2.3 Project Scheduling
+Week-wise schedule from requirement freeze to final submission.
+
+CHAPTER-3 SYSTEM REQUIREMENTS STUDY
+
+3.1 Study of Current System
+Current tools are costlier and less optimized for one-to-many educational streaming.
+
+3.2 Problems and Weaknesses of Current System
+Centralization, higher latency, license constraints, poor customizability.
+
+3.3 User Characteristics
+Teacher, Student, Administrator.
+
+3.4 Hardware and Software Requirements
+Minimum and recommended cloud and runtime requirements.
+
+3.5 Constraints
+Network variability, single-origin risk, startup delays, cost spikes.
+
+3.5.1 Regulatory Policies
+GDPR/FERPA-ready data handling model.
+
+3.5.2 Hardware Limitations
+Edge capacity bound by CPU and network.
+
+3.5.3 Interfaces to Other Applications
+REST and token integrations, future LMS/SSO.
+
+3.5.4 Parallel Operations
+Concurrent classrooms via worker pools.
+
+3.5.5 Higher Order Language Requirements
+Modern JavaScript ecosystem.
+
+3.5.6 Reliability Requirements
+Reconnect grace window, retries, health heartbeats.
+
+3.5.7 Criticality of Application
+Live class continuity is operationally critical.
+
+3.5.8 Safety and Security Consideration
+JWT, DTLS/SRTP, secured cloud networking.
+
+3.6 Assumptions and Dependencies
+Stable teacher network, healthy managed services, valid TLS and LB setup.
+
+CHAPTER-4 SYSTEM ANALYSIS
+
+4.1 Requirements of New System (SRS)
+4.1.1 User Requirements
+4.1.2 System Requirements
+
+4.2 Features Of New System
+Origin-edge fan-out, classroom and join-code logic, viewer updates, resilience behavior.
+
+4.3 Navigation Chart
+(Insert Fig 4.1 Mermaid from Markdown draft)
+
+4.5 Class Diagram (Analysis level)
+(Insert Fig 4.2 Mermaid from Markdown draft)
+
+4.6 System Activity (Use case and/or scenario diagram)
+(Insert Fig 4.3 Mermaid from Markdown draft)
+
+4.7 Sequence Diagram (Analysis level)
+(Insert Fig 4.4 Mermaid from Markdown draft)
+
+4.8 Data Modeling
+4.8.1 Data Dictionary
+4.8.2 ER Diagram (Insert Fig 4.5 Mermaid)
+
+CHAPTER-5 SYSTEM DESIGN
+
+5.1 System Architecture Design
+5.1.1 Class Diagram (Design level with implementation environment)
+5.1.2 Sequence Diagrams (Design level)
+5.1.3 Component Diagram
+5.1.4 Deployment Diagram
+
+5.2 Database Design/Data Structure Design
+5.2.1 Table and Relationship
+5.2.2 Logical Description Of Data
+
+5.3 Input/Output and Interface Design
+5.3.1 State Transition/UML Diagram
+5.3.2 Samples Of Forms, Reports and Interface
+
+CHAPTER-6 IMPLEMENTATION PLANNING
+
+6.1 Implementation Environment
+Development, staging, and production deployment characteristics.
+
+6.2 Program/Modules Specification
+Origin handlers, edge handlers, pipe manager, Redis client, Prisma, auth middleware, frontend pages.
+
+6.3 Coding Standards
+Async error handling, modular design, config validation, structured logging.
+
+CHAPTER-7 TESTING
+
+7.1 Testing Plan
+Functional, integration, resilience, and performance-oriented checks.
+
+7.2 Testing Strategy
+Unit, integration, end-to-end manual scenarios.
+
+7.3 Testing Methods
+Black-box, scenario, and observability-assisted testing.
+
+7.4 Test Cases
+Includes TC-01 to TC-12 with purpose, input, and expected result in Markdown draft table.
+
+CHAPTER-8 USER MANUAL
+
+8.1 Login Flow
+8.2 Registration Flow
+8.3 Teacher Dashboard and Classroom Creation
+8.4 Student Join Classroom
+8.5 Start and Watch Live Broadcast
+
+Screenshot placeholders are included and should be replaced with actual captures.
+
+CHAPTER-9 LIMITATION AND FUTURE ENHANCEMENT
+
+Current limitations: single-origin risk, no recording, basic analytics, no mobile app, static thresholds.
+Future enhancements: multi-region HA, recording, analytics, adaptive bitrate, engagement tools.
+
+CHAPTER-10 CONCLUSION AND DISCUSSION
+
+10.1 Conclusions and Future Enhancement
+Origin-edge architecture proved scalable and low-latency for educational one-to-many live sessions.
+
+10.2 Discussion
+10.2.1 Self Analysis of Project Viabilities
+10.2.2 Problem Encountered and Possible Solutions
+10.2.3 Summary of Project Work
+
+APPENDICES
+
+Appendix A: API Overview
+Appendix B: Environment Variables
+Appendix C: Database Schema Summary
+
+REFERENCES
+
+1. AWS. Amazon EC2 Auto Scaling User Guide.
+2. AWS. Elastic Load Balancing Application Load Balancers Guide.
+3. AWS. Amazon ElastiCache for Redis Documentation.
+4. IETF RFC 8825.
+5. IETF RFC 8834.
+6. mediasoup Documentation.
+7. Node.js Documentation.
+8. Prisma Documentation.
+9. Redis Documentation.
+10. Socket.IO Documentation.
+
+EXPERIENCE
+
+Intentionally excluded in this draft.
