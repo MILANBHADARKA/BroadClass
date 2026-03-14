@@ -51,7 +51,7 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
 
     if (broadcast.pipeTimer) clearTimeout(broadcast.pipeTimer);
 
-    await cleanupPipes(broadcast);
+    await cleanupPipes(broadcast, config.internalApiKey);
 
     broadcast.producers.forEach((p) => { try { p.close(); } catch (_) {} });
     try { broadcast.router.close(); } catch (_) {}
@@ -280,7 +280,7 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
           if (broadcast.pipeTimer) clearTimeout(broadcast.pipeTimer);
           broadcast.pipeTimer = setTimeout(async () => {
             broadcast.piped = true;
-            await connectEdgeServers(roomId, broadcasts, redisClient, state.containerIp);
+            await connectEdgeServers(roomId, broadcasts, redisClient, state.containerIp, config.internalApiKey);
             await redisClient.registerBroadcast(roomId, {
               originServer: `${config.announcedIp}:${config.port}`,
               producerId: producer.id,

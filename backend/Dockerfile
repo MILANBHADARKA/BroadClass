@@ -1,4 +1,4 @@
-FROM node:22-slim
+FROM node:22-slim AS builder
 
 WORKDIR /app/backend
 
@@ -23,6 +23,18 @@ COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# ── Runtime stage ──
+FROM node:22-slim
+
+WORKDIR /app/backend
+
+# Only install runtime native dependencies for mediasoup
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/backend .
 
 # Expose ports
 EXPOSE 3001 40000-40399/udp

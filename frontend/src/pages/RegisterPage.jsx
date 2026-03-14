@@ -25,6 +25,15 @@ export default function RegisterPage() {
     if (form.password.length < 6) {
       return setError('Password must be at least 6 characters');
     }
+    if (!/[A-Z]/.test(form.password)) {
+      return setError('Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(form.password)) {
+      return setError('Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(form.password)) {
+      return setError('Password must contain at least one number');
+    }
 
     setLoading(true);
     try {
@@ -89,7 +98,7 @@ export default function RegisterPage() {
               <label htmlFor="email" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
                 Email
               </label>
-              <input id="email" type="email" placeholder="Enter Your Name" value={form.email}
+              <input id="email" type="email" placeholder="Enter Your Email" value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })} required className={inputClass} />
             </div>
 
@@ -98,7 +107,7 @@ export default function RegisterPage() {
                 <label htmlFor="password" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
                   Password
                 </label>
-                <input id="password" type="password" placeholder="Min 6 chars" value={form.password}
+                <input id="password" type="password" placeholder="Min 6 chars, A-z, 0-9" value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })} required className={inputClass} />
               </div>
               <div>

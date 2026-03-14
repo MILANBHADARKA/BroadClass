@@ -36,8 +36,9 @@ export function registerEdgeSocketHandlers({ io, config, edgeState, redisClient 
 
         const res = socketResources.get(socket.id);
         res.roomId = roomId;
-        res.viewerCounted = true;
+
         await redisClient.updateBroadcastViewerCount(roomId, 1);
+        res.viewerCounted = true;
 
         log.info(`Student ${socket.id} joined room ${roomId}`);
         cb({ success: true });

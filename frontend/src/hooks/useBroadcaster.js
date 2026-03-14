@@ -29,12 +29,23 @@ export default function useBroadcaster({ socket, device }) {
         return;
       }
 
-      // need to do fallback for mic acces                                      // comment
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280, min: 1280 }, height: { ideal: 720, min: 720 }, frameRate: { ideal: 30, min: 30 } },
-        audio: true,
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280, min: 1280 }, height: { ideal: 720, min: 720 }, frameRate: { ideal: 30, min: 30 } },
+          audio: true,
+        });
+      } catch (mediaErr) {
+        // Fallback: try video-only if mic access is denied
+        if (mediaErr.name === 'NotAllowedError' || mediaErr.name === 'NotFoundError') {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280, min: 1280 }, height: { ideal: 720, min: 720 }, frameRate: { ideal: 30, min: 30 } },
+            audio: false,
+          });
+        } else {
+          throw mediaErr;
+        }
+      }
 
       setIsBroadcasting(true);
       setIsScreenSharing(false);
@@ -83,9 +94,12 @@ export default function useBroadcaster({ socket, device }) {
       });
       videoProducerRef.current = videoProducer;
 
-      // Audio
-      const audioProducer = await producerTransport.produce({ track: stream.getAudioTracks()[0] });
-      audioProducerRef.current = audioProducer;
+      // Audio (skip if mic was denied during fallback)
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        const audioProducer = await producerTransport.produce({ track: audioTrack });
+        audioProducerRef.current = audioProducer;
+      }
     } catch (err) {
       console.error('Error starting broadcast:', err);
       alert('Failed to start broadcast: ' + err.message);

@@ -68,7 +68,7 @@ router.post('/register-edge', async (req, res) => {
     if (broadcasts && state && broadcasts.size > 0) {
       const edgeInfo = { serverId, ip, port, internalHost: internalHost || ip, internalPort: internalPort || port };
       for (const [roomId] of broadcasts) {
-        pipeToNewEdge(roomId, edgeInfo, broadcasts, state.containerIp)
+        pipeToNewEdge(roomId, edgeInfo, broadcasts, state.containerIp, INTERNAL_API_KEY)
           .catch((err) => log.warn(`Auto-pipe to ${serverId} for ${roomId} failed: ${err.message}`));
       }
     }
