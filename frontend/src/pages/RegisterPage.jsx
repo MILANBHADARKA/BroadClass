@@ -69,6 +69,7 @@ export default function RegisterPage() {
         <div className="glass rounded-2xl p-8 glow-accent-sm">
           <h1 className="text-xl font-bold text-text-primary mb-1">Get started</h1>
           <p className="text-text-muted text-sm mb-6">Join as a teacher or student</p>
+          <p className="text-red-600 text-sm mb-6">NOTE: Right now backend instaces are stopped, so if you want to test system then please contact admins.</p>
 
           {error && (
             <div className="bg-danger-muted border border-danger/30 text-red-300 px-4 py-3 rounded-xl text-sm mb-5 animate-fade-in">
