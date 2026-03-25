@@ -1,5 +1,5 @@
 /**
- * Auth REST Routes
+ * Auth REST Routes (System-Manager)
  *
  * POST /api/auth/register  – Create new user (teacher or student)
  * POST /api/auth/login     – Login with email + password
@@ -24,37 +24,34 @@ const IS_LOCALHOST = FRONTEND_ORIGIN.includes('localhost') || FRONTEND_ORIGIN.in
 /** Cookie options for the JWT HttpOnly cookie */
 function cookieOptions() {
   return {
-    httpOnly: true,                                   // JS cannot read this cookie
-    secure: IS_PROD && !IS_LOCALHOST,                  // HTTPS only in real production (not localhost)
-    sameSite: 'lax',                                   // lax works for same-site + top-level nav
-    maxAge: 7 * 24 * 60 * 60 * 1000,                  // 7 days (matches JWT expiry)
+    httpOnly: true,
+    secure: IS_PROD && !IS_LOCALHOST,
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };
 }
 
 // Register (stricter rate limit)
 router.post('/register', registrationRateLimiter, async (req, res) => {
+  log.debug(`📝 [MANAGER] POST /api/auth/register - name: ${req.body.name}, email: ${req.body.email}, role: ${req.body.role}`);
   try {
     const { name, email, password, role } = req.body;
 
-    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'name, email, and password are required' });
     }
 
-    // Sanitize and validate email
     const emailValidation = sanitizeEmail(email);
     if (!emailValidation.valid) {
       return res.status(400).json({ error: emailValidation.error });
     }
 
-    // Sanitize and validate name
     const nameValidation = sanitizeName(name, 2, 100);
     if (!nameValidation.valid) {
       return res.status(400).json({ error: nameValidation.error });
     }
 
-    // Validate password
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
       return res.status(400).json({ error: passwordValidation.error });
@@ -66,13 +63,11 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
       return res.status(400).json({ error: `role must be one of: ${validRoles.join(', ')}` });
     }
 
-    // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email: emailValidation.sanitized } });
     if (existing) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Hash password & create user
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
       data: { 
@@ -85,11 +80,9 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
     });
 
     const token = signToken({ id: user.id, email: user.email, role: user.role });
-
-    // Set HttpOnly cookie + return token in body (for Socket.IO)
     res.cookie('token', token, cookieOptions());
 
-    log.info(`User registered: ${user.email} (${user.role})`);
+    log.info(`✅ [SYSTEM-MANAGER] User registered: ${user.email} (${user.role})`);
     res.status(201).json({ user, token });
   } catch (err) {
     log.error('Register error:', err);
@@ -97,8 +90,9 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
   }
 });
 
-// Login (rate limited to prevent brute force)
+// Login
 router.post('/login', authRateLimiter, async (req, res) => {
+  log.debug(`📝 [MANAGER] POST /api/auth/login - email: ${req.body.email}`);
   try {
     const { email, password } = req.body;
 
@@ -106,7 +100,6 @@ router.post('/login', authRateLimiter, async (req, res) => {
       return res.status(400).json({ error: 'email and password are required' });
     }
 
-    // Sanitize email input
     const emailValidation = sanitizeEmail(email);
     if (!emailValidation.valid) {
       return res.status(400).json({ error: emailValidation.error });
@@ -123,11 +116,9 @@ router.post('/login', authRateLimiter, async (req, res) => {
     }
 
     const token = signToken({ id: user.id, email: user.email, role: user.role });
-
-    // Set HttpOnly cookie + return token in body (for Socket.IO)
     res.cookie('token', token, cookieOptions());
 
-    log.info(`User logged in: ${user.email} (${user.role})`);
+    log.info(`✅ [SYSTEM-MANAGER] User logged in: ${user.email} (${user.role})`);
     res.json({
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
       token,
@@ -139,13 +130,15 @@ router.post('/login', authRateLimiter, async (req, res) => {
 });
 
 // Logout
-router.post('/logout', (_req, res) => {
+router.post('/logout', (req, res) => {
+  log.info(`✅ [SYSTEM-MANAGER] User logged out: ${req.user?.email || 'unknown'}`);
   res.clearCookie('token', { httpOnly: true, path: '/' });
   res.json({ message: 'Logged out' });
 });
 
 // Me (protected)
 router.get('/me', verifyToken, async (req, res) => {
+  log.debug(`📝 [MANAGER] GET /api/auth/me - user: ${req.user.id}`);
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -154,10 +147,10 @@ router.get('/me', verifyToken, async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Return a fresh token so frontend can use it for Socket.IO after page refresh
     const token = signToken({ id: user.id, email: user.email, role: user.role });
     res.cookie('token', token, cookieOptions());
 
+    log.debug(`✅ [SYSTEM-MANAGER] Returned user profile: ${user.email}`);
     res.json({ user, token });
   } catch (err) {
     log.error('Me error:', err);

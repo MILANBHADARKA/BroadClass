@@ -7,8 +7,6 @@ import { RedisClient } from '../services/redisClient.js';
 import { registerOriginRoutes } from './routes.js';
 import { registerOriginSocketHandlers } from './socketHandlers.js';
 import { createLogger } from '../utils/logger.js';
-import authRoutes from './authRoutes.js';
-import classroomRoutes from './classroomRoutes.js';
 import edgeRegistryRoutes from './edgeRegistryRoutes.js';
 import { setupEdgeProxy } from './edgeProxy.js';
 import { socketAuthMiddleware } from '../middleware/auth.js';
@@ -92,9 +90,6 @@ async function start() {
   // Edge Socket.IO proxy — must be registered BEFORE other routes
   setupEdgeProxy(app, redisClient, edgeRegistry);
 
-  // Auth & Classroom REST routes
-  app.use('/api/auth', authRoutes);
-  app.use('/api/classrooms', classroomRoutes);
   app.use('/api/internal', edgeRegistryRoutes);
 
   registerOriginRoutes({ app, config, redisClient, state });

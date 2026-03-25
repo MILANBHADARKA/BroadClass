@@ -1,5 +1,5 @@
 /**
- * Classroom REST Routes
+ * Classroom REST Routes (System-Manager)
  *
  * POST   /api/classrooms          – Create classroom (TEACHER only)
  * GET    /api/classrooms          – List my classrooms (teacher → owned, student → enrolled)
@@ -19,23 +19,21 @@ import { createLogger } from '../utils/logger.js';
 const log = createLogger('classroom:routes');
 const router = Router();
 
-// All classroom routes require authentication
 router.use(verifyToken);
-
-//  Helpers 
 
 /** Generate a unique 6-char alphanumeric code */
 async function generateUniqueCode() {
   for (let i = 0; i < 10; i++) {
-    const code = crypto.randomBytes(3).toString('hex').toUpperCase(); // 6 hex chars
+    const code = crypto.randomBytes(3).toString('hex').toUpperCase();
     const exists = await prisma.classroom.findUnique({ where: { code } });
     if (!exists) return code;
   }
   throw new Error('Could not generate unique classroom code');
 }
 
-//  Create Classroom (TEACHER only) 
+// Create Classroom (TEACHER only)
 router.post('/', verifyRole('TEACHER'), async (req, res) => {
+  log.debug(`📝 [MANAGER] POST /api/classrooms - name: ${req.body.name}, teacher: ${req.user.email}`);
   try {
     const { name, description, subject } = req.body;
 
@@ -59,7 +57,7 @@ router.post('/', verifyRole('TEACHER'), async (req, res) => {
       },
     });
 
-    log.info(`Classroom created: "${name}" (code: ${code}) by ${req.user.email}`);
+    log.info(`✅ [SYSTEM-MANAGER] Classroom created via SYSTEM-MANAGER: "${name}" (${code}) by ${req.user.email}`);
     res.status(201).json({ classroom });
   } catch (err) {
     log.error('Create classroom error:', err);
@@ -67,11 +65,11 @@ router.post('/', verifyRole('TEACHER'), async (req, res) => {
   }
 });
 
-// List My Classrooms 
+// List My Classrooms
 router.get('/', async (req, res) => {
+  log.debug(`📝 [MANAGER] GET /api/classrooms - user: ${req.user.email} (${req.user.role})`);
   try {
     if (req.user.role === 'TEACHER') {
-      // Teachers see classrooms they own
       const classrooms = await prisma.classroom.findMany({
         where: { teacherId: req.user.id },
         include: {
@@ -79,10 +77,10 @@ router.get('/', async (req, res) => {
         },
         orderBy: { createdAt: 'desc' },
       });
+      log.debug(`✅ [SYSTEM-MANAGER] Returned ${classrooms.length} classrooms for teacher`);
       return res.json({ classrooms });
     }
 
-    // Students see classrooms they're enrolled in
     const enrollments = await prisma.enrollment.findMany({
       where: { studentId: req.user.id },
       include: {
@@ -108,8 +106,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get Classroom Details 
+// Get Classroom Details
 router.get('/:id', async (req, res) => {
+  log.debug(`📝 [MANAGER] GET /api/classrooms/${req.params.id} - user: ${req.user.email}`);
   try {
     const classroom = await prisma.classroom.findUnique({
       where: { id: req.params.id },
@@ -127,7 +126,6 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Classroom not found' });
     }
 
-    // Verify access: teacher owns it OR student is enrolled
     const isOwner = classroom.teacherId === req.user.id;
     const isEnrolled = classroom.enrollments.some((e) => e.studentId === req.user.id);
 
@@ -135,11 +133,11 @@ router.get('/:id', async (req, res) => {
       return res.status(403).json({ error: 'You do not have access to this classroom' });
     }
 
-    // Students should not see the join code
     if (!isOwner) {
       classroom.code = undefined;
     }
 
+    log.debug(`✅ [SYSTEM-MANAGER] Returned classroom: ${classroom.name}`);
     res.json({ classroom });
   } catch (err) {
     log.error('Get classroom error:', err);
@@ -149,6 +147,7 @@ router.get('/:id', async (req, res) => {
 
 // Join Classroom by Code (STUDENT only)
 router.post('/join', verifyRole('STUDENT'), async (req, res) => {
+  log.debug(`📝 [MANAGER] POST /api/classrooms/join - code: ${req.body.code}, student: ${req.user.email}`);
   try {
     const { code } = req.body;
 
@@ -168,7 +167,6 @@ router.post('/join', verifyRole('STUDENT'), async (req, res) => {
       return res.status(404).json({ error: 'Invalid classroom code' });
     }
 
-    // Check if already enrolled
     const existing = await prisma.enrollment.findUnique({
       where: {
         classroomId_studentId: {
@@ -189,7 +187,7 @@ router.post('/join', verifyRole('STUDENT'), async (req, res) => {
       },
     });
 
-    log.info(`Student ${req.user.email} joined classroom "${classroom.name}" (${code})`);
+    log.info(`✅ [SYSTEM-MANAGER] Student joined via SYSTEM-MANAGER: ${req.user.email} → "${classroom.name}" (${code})`);
     res.json({
       message: `Joined "${classroom.name}" successfully`,
       classroom: {
@@ -206,7 +204,7 @@ router.post('/join', verifyRole('STUDENT'), async (req, res) => {
   }
 });
 
-// Leave Classroom (STUDENT only) 
+// Leave Classroom (STUDENT only)
 router.delete('/:id/leave', verifyRole('STUDENT'), async (req, res) => {
   try {
     const enrollment = await prisma.enrollment.findUnique({

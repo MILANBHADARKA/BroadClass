@@ -27,8 +27,11 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  classrooms  Classroom[]  // classrooms this teacher owns
-  enrollments Enrollment[] // classrooms this student joined
+  classrooms        Classroom[]  // classrooms this teacher owns
+  enrollments       Enrollment[] // classrooms this student joined
+  recordings        Recording[]  @relation("UserRecordings") // recordings this teacher created
+  recordingPerms    RecordingPermission[] @relation("RecordingPermissions") // permissions granted to this user
+  grantedPermissions RecordingPermission[] @relation("GrantedPermissions") // permissions granted by this user
 }
 
 model Classroom {
@@ -44,6 +47,7 @@ model Classroom {
   // Relations
   teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   enrollments Enrollment[]
+  recordings  Recording[]  @relation("TeacherRecordings")
 
   @@index([teacherId])
   @@index([code])
@@ -62,4 +66,78 @@ model Enrollment {
   @@unique([classroomId, studentId]) // student can only join once
   @@index([studentId])
   @@index([classroomId])
+}
+
+// ── Recording & Permissions ─────────────────────────────────
+
+enum RecordingStatus {
+  RECORDING
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum AccessType {
+  PRIVATE      // Only owner + explicit permissions
+  CLASSROOM    // All students in classroom
+  PUBLIC       // Anyone with link (signed URL)
+}
+
+model Recording {
+  id          String   @id @default(uuid())
+  classroomId String
+  teacherId   String   // who started the recording
+  broadcastId String?  // room ID of the broadcast
+  title       String   @default("Untitled Recording")
+  description String?
+  
+  // S3 Details
+  s3Key       String   @unique
+  s3Url       String
+  duration    Int      @default(0) // seconds
+  fileSize    BigInt   @default(0) // bytes
+  
+  // Status
+  status      RecordingStatus @default(RECORDING) // RECORDING → PROCESSING → READY
+  progress    Int      @default(0) // 0-100
+  uploadedBytes BigInt  @default(0) // for progress tracking
+  
+  // Access Control
+  accessType  AccessType @default(PRIVATE)
+  expiresAt   DateTime? // Optional: auto-delete/archive after X days
+  
+  // Timestamps
+  recordingStarted DateTime @default(now())
+  recordingEnded   DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  classroom  Classroom          @relation("TeacherRecordings", fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher    User               @relation("UserRecordings", fields: [teacherId], references: [id], onDelete: Cascade)
+  permissions RecordingPermission[]
+  
+  @@index([classroomId])
+  @@index([teacherId])
+  @@index([status])
+  @@index([recordingStarted])
+}
+
+model RecordingPermission {
+  id          String   @id @default(uuid())
+  recordingId String
+  userId      String   // can be teacher or student
+  accessLevel String   @default("view") // "view", "edit", "revoke"
+  grantedAt   DateTime @default(now())
+  grantedBy   String   // who granted this permission (teacher ID)
+  
+  // Relations
+  recording Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  user      User     @relation("RecordingPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User  @relation("GrantedPermissions", fields: [grantedBy], references: [id], onDelete: SetNull)
+  
+  @@unique([recordingId, userId])
+  @@index([recordingId])
+  @@index([userId])
 }

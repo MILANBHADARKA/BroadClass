@@ -6,7 +6,10 @@ import { useAuth } from '../context/AuthContext';
 import BroadcastButton from '../components/BroadcastButton';
 import BroadcastList from '../components/BroadcastList';
 
-const ORIGIN_SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+// System-Manager (port 3000) for APIs and real-time updates
+const MANAGER_SERVER = import.meta.env.VITE_MANAGER_URL || 'http://localhost:3000';
+// Origin (port 3001) for broadcaster WebRTC signaling
+const ORIGIN_SERVER = import.meta.env.VITE_ORIGIN_URL || 'http://localhost:3001';
 
 export default function ClassroomDetail() {
   const { id: classroomId } = useParams();
@@ -40,7 +43,7 @@ export default function ClassroomDetail() {
     })();
   }, [classroomId, token, API_URL]);
 
-  // Connect Socket.IO with auth token
+  // Connect Socket.IO to Origin for WebRTC signaling
   useEffect(() => {
     if (!token) return;
 
@@ -101,7 +104,7 @@ export default function ClassroomDetail() {
     async (roomId) => {
       try {
         const response = await authFetch(
-          `${ORIGIN_SERVER}/api/best-server?roomId=${roomId}`,
+          `${API_URL}/api/best-edge?roomId=${roomId}`,
         );
 
         if (!response.ok) {
@@ -123,7 +126,7 @@ export default function ClassroomDetail() {
         return currentServer;
       }
     },
-    [token, currentServer],
+    [token, currentServer, API_URL, authFetch],
   );
 
   if (loading) {

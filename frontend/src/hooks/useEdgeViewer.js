@@ -22,9 +22,9 @@ export default function useEdgeViewer({ device, onJoinBroadcast, authToken }) {
       const bestEdge = await onJoinBroadcast(roomId);
       setEdgeInfo(bestEdge);
 
-      // Get base API URL from environment
-      const apiUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
-      const isSecure = apiUrl.startsWith('https://');
+      // Get manager API URL from environment (for /api/best-edge calls)
+      const managerUrl = import.meta.env.VITE_MANAGER_URL || 'http://localhost:3000';
+      const isSecure = managerUrl.startsWith('https://');
 
       // Production: Route through Nginx reverse proxy (SSL termination)
       // Development: Connect directly to edge IP:port
@@ -32,7 +32,7 @@ export default function useEdgeViewer({ device, onJoinBroadcast, authToken }) {
       if (isSecure) {
         // Route edge Socket.IO through the origin's HTTP proxy (HTTPS → VPC-internal HTTP)
         // Path: /edge/:serverId/socket.io/ — proxied to edge's private IP on origin
-        newEdgeSocket = io(apiUrl, {
+        newEdgeSocket = io(managerUrl, {
           path: `/edge/${bestEdge.serverId}/socket.io/`,
           auth: authToken ? { token: authToken } : undefined,
         });

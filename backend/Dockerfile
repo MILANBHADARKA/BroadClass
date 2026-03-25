@@ -21,6 +21,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Copy and make start script executable
+COPY start.sh /app/backend/start.sh
+RUN chmod +x /app/backend/start.sh
+
 # Generate Prisma client
 RUN npx prisma generate
 
@@ -29,7 +33,7 @@ EXPOSE 3001 40000-40399/udp
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+    CMD node -e "require('http').get('http://localhost:${PORT:-3001}/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# Run migrations then start origin server
-CMD ["sh", "-c", "npx prisma migrate deploy && node src/origin/index.js"]
+# Run migrations then start appropriate server based on ROLE
+CMD [ "/app/backend/start.sh" ]

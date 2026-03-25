@@ -62,6 +62,13 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
     log.info(`Broadcast cleaned up: ${roomId}`);
     io.emit('broadcastEnded', { roomId });
     io.emit('broadcastList', await getBroadcastList());
+
+    // Publish to System-Manager via Redis
+    try {
+      await redisClient.publish('broadcast:list-updated', JSON.stringify({ action: 'ended', roomId }));
+    } catch (err) {
+      log.warn('Failed to publish broadcast update to Redis:', err.message);
+    }
   }
 
   // Grace timers: roomId → { timer, lostSocketId, savedResources }
@@ -292,6 +299,20 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
 
         cb({ producerId: producer.id });
         io.emit('broadcastList', await getBroadcastList());
+
+        // Publish to System-Manager via Redis (on first producer)
+        if (broadcast.producers.size === 1) {
+          try {
+            await redisClient.publish('broadcast:list-updated', JSON.stringify({ 
+              action: 'created', 
+              roomId,
+              teacherId: socket.user?.id,
+              startedAt: broadcast.createdAt,
+            }));
+          } catch (err) {
+            log.warn('Failed to publish broadcast update to Redis:', err.message);
+          }
+        }
       } catch (err) {
         log.error('Error starting broadcast:', err);
         cb({ error: err.message });
@@ -317,6 +338,17 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
 
         await redisClient.updateBroadcastViewerCount(roomId, 1);
         log.info(`Fallback viewer ${socket.id} joined ${roomId} (${broadcast.viewers.size} viewers)`);
+
+        // Publish viewer count change to System-Manager
+        try {
+          const stored = await redisClient.getBroadcast(roomId);
+          await redisClient.publish('broadcast:viewer-count', JSON.stringify({ 
+            roomId, 
+            viewerCount: stored?.viewerCount ?? 1
+          }));
+        } catch (err) {
+          log.warn('Failed to publish viewer count to Redis:', err.message);
+        }
 
         cb({ success: true });
         io.emit('broadcastList', await getBroadcastList());
@@ -396,6 +428,17 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
         redisClient.updateBroadcastViewerCount(roomId, -1)
           .then(async () => {
             io.emit('broadcastList', await getBroadcastList());
+
+            // Publish viewer count change to System-Manager
+            try {
+              const stored = await redisClient.getBroadcast(roomId);
+              await redisClient.publish('broadcast:viewer-count', JSON.stringify({ 
+                roomId, 
+                viewerCount: stored?.viewerCount ?? 0
+              }));
+            } catch (err) {
+              log.warn('Failed to publish viewer count to Redis:', err.message);
+            }
           })
           .catch(() => {});
       }
@@ -436,6 +479,17 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
             redisClient.updateBroadcastViewerCount(roomId, -1)
               .then(async () => {
                 io.emit('broadcastList', await getBroadcastList());
+
+                // Publish viewer count change to System-Manager
+                try {
+                  const stored = await redisClient.getBroadcast(roomId);
+                  await redisClient.publish('broadcast:viewer-count', JSON.stringify({ 
+                    roomId, 
+                    viewerCount: stored?.viewerCount ?? 0
+                  }));
+                } catch (err) {
+                  log.warn('Failed to publish viewer count to Redis:', err.message);
+                }
               })
               .catch(() => {});
           }

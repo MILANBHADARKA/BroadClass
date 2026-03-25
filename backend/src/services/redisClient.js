@@ -264,6 +264,28 @@ export class RedisClient {
     };
   }
 
+  // Generic Redis operations (for direct access to client)
+
+  async get(key) {
+    return this.client.get(key);
+  }
+
+  async set(key, value, options = {}) {
+    return this.client.set(key, value, options);
+  }
+
+  async keys(pattern) {
+    return this.client.keys(pattern);
+  }
+
+  async del(key) {
+    return this.client.del(key);
+  }
+
+  async exists(key) {
+    return this.client.exists(key);
+  }
+
   // Pub/Sub
 
   async subscribeToExpiration(callback) {
