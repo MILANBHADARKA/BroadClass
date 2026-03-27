@@ -19,6 +19,15 @@ const log = createLogger('edge:api');
  * @param {object}  deps.edgeState – { mainRouter, broadcasts, connectedStudents, containerIp, io }
  */
 export function registerEdgeRoutes({ app, config, edgeState }) {
+  // Internal API key verification for pipe endpoints
+  const verifyInternalKey = (req, res, next) => {
+    const key = req.headers['x-internal-key'];
+    if (key !== config.internalApiKey) {
+      return res.status(403).json({ error: 'Forbidden: invalid internal API key' });
+    }
+    next();
+  };
+
   // Liveness probe - simple check that process is alive (no dependencies)
   app.get('/health/live', (_req, res) => {
     res.status(200).json({
@@ -67,7 +76,7 @@ export function registerEdgeRoutes({ app, config, edgeState }) {
   });
 
   // Pipe Setup (called by Origin)
-  app.post('/api/pipe-setup', async (req, res) => {
+  app.post('/api/pipe-setup', verifyInternalKey, async (req, res) => {
     try {
       const { roomId, originPipeIp, originPipePort, originSrtpParameters } = req.body;
       log.info(`Pipe setup for room: ${roomId} (origin ${originPipeIp}:${originPipePort})`);
@@ -113,7 +122,7 @@ export function registerEdgeRoutes({ app, config, edgeState }) {
   });
 
   // Pipe Produce (called by Origin)
-  app.post('/api/pipe-produce', async (req, res) => {
+  app.post('/api/pipe-produce', verifyInternalKey, async (req, res) => {
     try {
       const { roomId, producers } = req.body;
       log.info(`Pipe produce for room: ${roomId} (${producers.length} producer(s))`);
@@ -152,7 +161,7 @@ export function registerEdgeRoutes({ app, config, edgeState }) {
   });
 
   // Pipe Cleanup (called by Origin)
-  app.post('/api/pipe-cleanup', (req, res) => {
+  app.post('/api/pipe-cleanup', verifyInternalKey, (req, res) => {
     try {
       const { roomId } = req.body;
       log.info(`Cleaning up broadcast ${roomId}`);

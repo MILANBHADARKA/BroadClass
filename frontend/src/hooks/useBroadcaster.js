@@ -106,9 +106,12 @@ export default function useBroadcaster({ socket, device }) {
       });
       videoProducerRef.current = videoProducer;
 
-      // Audio
-      const audioProducer = await producerTransport.produce({ track: stream.getAudioTracks()[0] });
-      audioProducerRef.current = audioProducer;
+      // Audio (skip if mic was denied during fallback)
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        const audioProducer = await producerTransport.produce({ track: audioTrack });
+        audioProducerRef.current = audioProducer;
+      }
     } catch (err) {
       console.error('Error starting broadcast:', err);
       alert('Failed to start broadcast: ' + err.message);

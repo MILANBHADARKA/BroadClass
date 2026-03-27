@@ -123,6 +123,32 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.edge
+    environment: &edge-env
+      PORT: 3002
+      NODE_ENV: ${NODE_ENV:-production}
+      ROLE: EDGE
+      ANNOUNCED_IP: ${ANNOUNCED_IP:-127.0.0.1}
+      ORIGIN_IP: origin-server
+      ORIGIN_PORT: 3001
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
+      MAX_CAPACITY: 200
+      HEALTH_CHECK_INTERVAL: 10000
+      LOG_LEVEL: warn
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://broadclass.xyz}
+      NUM_WORKERS: 2
+    depends_on:
+      origin-server:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 10s
+    networks:
+      - broadclass-network
+
+  # Edge Server 1
+  edge-server-1:
+    <<: *edge-common
     container_name: broadclass-edge-1
     ports:
       - "3002:3002"
