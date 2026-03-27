@@ -26,15 +26,6 @@ export default function RegisterPage() {
     if (form.password.length < 6) {
       return setError('Password must be at least 6 characters');
     }
-    if (!/[A-Z]/.test(form.password)) {
-      return setError('Password must contain at least one uppercase letter');
-    }
-    if (!/[a-z]/.test(form.password)) {
-      return setError('Password must contain at least one lowercase letter');
-    }
-    if (!/[0-9]/.test(form.password)) {
-      return setError('Password must contain at least one number');
-    }
 
     setLoading(true);
     try {

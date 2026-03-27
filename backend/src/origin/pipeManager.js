@@ -14,7 +14,7 @@ const log = createLogger('origin:pipe');
  * @param {object}  redisClient
  * @param {string}  containerIp  – Origin container's internal IP
  */
-export async function connectEdgeServers(roomId, broadcasts, redisClient, containerIp, internalApiKey) {
+export async function connectEdgeServers(roomId, broadcasts, redisClient, containerIp) {
   const broadcast = broadcasts.get(roomId);
   if (!broadcast || broadcast.producers.size === 0) {
     log.warn(`No producers for ${roomId}, skipping pipe`);
@@ -32,7 +32,7 @@ export async function connectEdgeServers(roomId, broadcasts, redisClient, contai
 
   for (const edge of edges) {
     try {
-      await pipeToEdgeWithRetry(roomId, edge, broadcasts, containerIp, internalApiKey);
+      await pipeToEdgeWithRetry(roomId, edge, broadcasts, containerIp);
     } catch (err) {
       log.error(`Skipping ${edge.serverId} after all retries failed: ${err.message}`);
     }
@@ -45,7 +45,7 @@ export async function connectEdgeServers(roomId, broadcasts, redisClient, contai
  * Pipe a single broadcast to one specific edge (e.g. a newly registered edge).
  * Skips silently if the broadcast isn't active or is already piped to this edge.
  */
-export async function pipeToNewEdge(roomId, edgeInfo, broadcasts, containerIp, internalApiKey) {
+export async function pipeToNewEdge(roomId, edgeInfo, broadcasts, containerIp) {
   const broadcast = broadcasts.get(roomId);
   if (!broadcast || broadcast.producers.size === 0) {
     log.warn(`pipeToNewEdge: no producers for ${roomId}, skipping`);
@@ -56,18 +56,18 @@ export async function pipeToNewEdge(roomId, edgeInfo, broadcasts, containerIp, i
     return;
   }
   log.info(`Auto-piping ${roomId} to newly registered edge ${edgeInfo.serverId}`);
-  await pipeToEdgeWithRetry(roomId, edgeInfo, broadcasts, containerIp, internalApiKey);
+  await pipeToEdgeWithRetry(roomId, edgeInfo, broadcasts, containerIp);
 }
 
 /**
  * Retry wrapper for pipeToEdge with exponential backoff.
  * Skips the edge permanently after maxAttempts failures.
  */
-async function pipeToEdgeWithRetry(roomId, edgeInfo, broadcasts, containerIp, internalApiKey, maxAttempts = 3) {
+async function pipeToEdgeWithRetry(roomId, edgeInfo, broadcasts, containerIp, maxAttempts = 3) {
   const delays = [500, 1000, 2000];
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      await pipeToEdge(roomId, edgeInfo, broadcasts, containerIp, internalApiKey);
+      await pipeToEdge(roomId, edgeInfo, broadcasts, containerIp);
       return;
     } catch (err) {
       if (attempt === maxAttempts - 1) throw err;
@@ -91,10 +91,9 @@ async function pipeToEdgeWithRetry(roomId, edgeInfo, broadcasts, containerIp, in
  *  5. POST /api/pipe-produce to edge → edge creates virtual producers
  *  6. Store pipe info, update Redis
  */
-async function pipeToEdge(roomId, edgeInfo, broadcasts, containerIp, internalApiKey) {
+async function pipeToEdge(roomId, edgeInfo, broadcasts, containerIp) {
   const broadcast = broadcasts.get(roomId);
   const edgeUrl = `http://${edgeInfo.internalHost}:${edgeInfo.internalPort}`;
-  const internalHeaders = { 'Content-Type': 'application/json', 'X-Internal-Key': internalApiKey };
 
   log.info(`  Piping to ${edgeInfo.serverId} (${edgeUrl})...`);
 
@@ -112,7 +111,7 @@ async function pipeToEdge(roomId, edgeInfo, broadcasts, containerIp, internalApi
     // 2. Call edge pipe-setup
     const setupRes = await fetch(`${edgeUrl}/api/pipe-setup`, {
       method: 'POST',
-      headers: internalHeaders,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roomId,
         originPipeIp: containerIp,
@@ -148,7 +147,7 @@ async function pipeToEdge(roomId, edgeInfo, broadcasts, containerIp, internalApi
     // 5. Tell edge to create virtual producers
     const produceRes = await fetch(`${edgeUrl}/api/pipe-produce`, {
       method: 'POST',
-      headers: internalHeaders,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomId, producers: producerInfos }),
     });
 
@@ -181,7 +180,7 @@ async function pipeToEdge(roomId, edgeInfo, broadcasts, containerIp, internalApi
  * Closes the origin-side pipe transport, notifies the edge, and removes it
  * from the broadcast's active edge list.
  */
-export async function cleanupSingleEdgePipe(roomId, edgeServerId, broadcasts, internalApiKey) {
+export async function cleanupSingleEdgePipe(roomId, edgeServerId, broadcasts) {
   const broadcast = broadcasts.get(roomId);
   if (!broadcast) return;
 
@@ -191,7 +190,7 @@ export async function cleanupSingleEdgePipe(roomId, edgeServerId, broadcasts, in
   const edgeUrl = `http://${pipeInfo.edgeInfo.internalHost}:${pipeInfo.edgeInfo.internalPort}`;
   fetch(`${edgeUrl}/api/pipe-cleanup`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Internal-Key': internalApiKey },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ roomId }),
   }).catch((e) => log.error(`Cleanup notify to ${edgeServerId} failed: ${e.message}`));
 
@@ -204,13 +203,13 @@ export async function cleanupSingleEdgePipe(roomId, edgeServerId, broadcasts, in
 /**
  * Notify edge servers that a broadcast has ended, and clean up pipe resources.
  */
-export async function cleanupPipes(broadcast, internalApiKey) {
+export async function cleanupPipes(broadcast) {
   for (const [serverId, pipeInfo] of broadcast.pipeTransports) {
     try {
       const edgeUrl = `http://${pipeInfo.edgeInfo.internalHost}:${pipeInfo.edgeInfo.internalPort}`;
       fetch(`${edgeUrl}/api/pipe-cleanup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Internal-Key': internalApiKey },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId: broadcast.roomId }),
       }).catch((e) => log.error(`Error notifying ${serverId}: ${e.message}`));
     } catch (_) {

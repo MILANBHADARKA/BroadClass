@@ -122,22 +122,16 @@ export class RedisClient {
   }
 
   async getAllEdges() {
-    const edges = [];
-    let cursor = '0';
-    do {
-      const result = await this.client.scan(cursor, { MATCH: 'edge:*', COUNT: 100 });
-      cursor = result.cursor.toString();
-      if (result.keys.length) {
-        const values = await Promise.all(result.keys.map((k) => this.client.get(k)));
-        for (const data of values) {
-          if (data) {
-            const parsed = JSON.parse(data);
-            if (parsed?.isAlive) edges.push(parsed);
-          }
-        }
-      }
-    } while (cursor !== '0');
-    return edges;
+    const keys = await this.client.keys('edge:*');
+    if (!keys?.length) return [];
+
+    const edges = await Promise.all(
+      keys.map(async (key) => {
+        const data = await this.client.get(key);
+        return data ? JSON.parse(data) : null;
+      }),
+    );
+    return edges.filter((e) => e?.isAlive);
   }
 
   async removeEdge(serverId) {
@@ -229,22 +223,16 @@ export class RedisClient {
   }
 
   async getAllBroadcasts() {
-    const broadcasts = [];
-    let cursor = '0';
-    do {
-      const result = await this.client.scan(cursor, { MATCH: 'broadcast:*', COUNT: 100 });
-      cursor = result.cursor.toString();
-      if (result.keys.length) {
-        const values = await Promise.all(result.keys.map((k) => this.client.get(k)));
-        for (const data of values) {
-          if (data) {
-            const parsed = JSON.parse(data);
-            if (parsed?.status === 'active') broadcasts.push(parsed);
-          }
-        }
-      }
-    } while (cursor !== '0');
-    return broadcasts;
+    const keys = await this.client.keys('broadcast:*');
+    if (!keys?.length) return [];
+
+    const broadcasts = await Promise.all(
+      keys.map(async (key) => {
+        const data = await this.client.get(key);
+        return data ? JSON.parse(data) : null;
+      }),
+    );
+    return broadcasts.filter((b) => b?.status === 'active');
   }
 
   // Statistics
