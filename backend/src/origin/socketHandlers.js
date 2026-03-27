@@ -13,14 +13,15 @@ const log = createLogger('origin:socket');
 
 /**
  * @param {object}  deps
- * @param {object}  deps.io           – Socket.IO server
+ * @param {object}  deps.io               – Socket.IO server
  * @param {object}  deps.config
  * @param {object}  deps.redisClient
- * @param {Map}     deps.broadcasts   – shared originBroadcasts map
- * @param {object}  deps.state        – { rtpCapabilities, containerIp }
+ * @param {Map}     deps.broadcasts       – shared originBroadcasts map
+ * @param {object}  deps.state            – { rtpCapabilities, containerIp }
  * @param {Function} deps.getNextWorker
+ * @param {OriginRecordingHandler} deps.recordingHandler – for recording lifecycle
  */
-export function registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker }) {
+export function registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker, recordingHandler }) {
   /** Helper: build broadcast list for clients */
   async function getBroadcastList() {
     const entries = Array.from(broadcasts.entries());
@@ -44,6 +45,11 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
     if (!broadcast || broadcast.broadcasterId !== broadcasterId) return;
 
     log.info(`Cleaning up broadcast: ${roomId}`);
+
+    // Unregister from recording handler
+    if (recordingHandler) {
+      recordingHandler.unregisterBroadcastRoom(roomId);
+    }
 
     // Cancel any pending grace timer
     const grace = broadcasterGraceTimers.get(roomId);
@@ -156,6 +162,12 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
             };
             broadcasts.set(roomId, broadcast);
             log.info(`Broadcast created: ${roomId}`);
+            
+            // Register with recording handler for capture
+            if (recordingHandler) {
+              recordingHandler.registerBroadcastRoom(roomId, broadcast);
+              log.info(`Broadcast registered with recording handler: ${roomId}`);
+            }
           }
 
           const transport = await broadcast.router.createWebRtcTransport({

@@ -8,9 +8,11 @@
  * - Automatic retry on transient failures
  * - Cleanup on failure
  * - Integration with Redis for progress pub/sub
+ * - Presigned URL generation for secure downloads
  */
 
-import { S3Client, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, ListPartsCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, ListPartsCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('s3:service');
@@ -27,17 +29,19 @@ export class S3RecordingService {
       secretAccessKey: process.env.S3_SECRET_KEY,
     };
 
+    // In development, allow running without S3 credentials (recordings will fail gracefully)
     if (!this.config.accessKeyId || !this.config.secretAccessKey) {
-      throw new Error('S3_ACCESS_KEY and S3_SECRET_KEY environment variables are required');
+      log.warn('⚠️ S3_ACCESS_KEY and S3_SECRET_KEY not set. Recording uploads will be disabled.');
+      this.client = null;
+    } else {
+      this.client = new S3Client({
+        region: this.config.region,
+        credentials: {
+          accessKeyId: this.config.accessKeyId,
+          secretAccessKey: this.config.secretAccessKey,
+        },
+      });
     }
-
-    this.client = new S3Client({
-      region: this.config.region,
-      credentials: {
-        accessKeyId: this.config.accessKeyId,
-        secretAccessKey: this.config.secretAccessKey,
-      },
-    });
 
     // In-progress uploads: recordingId → { uploadId, parts, uploadedBytes }
     this.activeUploads = new Map();
@@ -50,6 +54,10 @@ export class S3RecordingService {
    * @returns {object} { uploadId, s3Key, s3Url }
    */
   async initiateUpload(recordingId, filename) {
+    if (!this.client) {
+      throw new Error('S3 client not configured. Set S3_ACCESS_KEY and S3_SECRET_KEY environment variables.');
+    }
+
     const s3Key = `${this.config.prefix}/${recordingId}/${filename}`;
 
     try {
@@ -210,18 +218,32 @@ export class S3RecordingService {
   }
 
   /**
-   * Generate a pre-signed URL for downloading a recording
+   * Generate a presigned URL for downloading a recording
    * @param {string} s3Key - S3 object key
-   * @param {number} expirationSeconds - URL expiration time (default 24 hours)
-   * @returns {string} Pre-signed URL
+   * @param {number} expirationSeconds - URL expiration time (default 1 hour)
+   * @returns {Promise<string>} Pre-signed URL
    */
-  generatePresignedUrl(s3Key, expirationSeconds = 24 * 60 * 60) {
-    // Using SDK v3, you need to use @aws-sdk/s3-request-presigner
-    // For now, return a simple approach (not production ready)
-    // In Phase 2, integrate @aws-sdk/s3-request-presigner
-    const baseUrl = `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/${s3Key}`;
-    log.warn(`⚠️ Using unsigned URL. For secure access, implement presigner in next phase.`);
-    return baseUrl;
+  async generatePresignedUrl(s3Key, expirationSeconds = 3600) {
+    if (!this.client) {
+      throw new Error('S3 client not initialized - cannot generate presigned URL');
+    }
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.config.bucket,
+        Key: s3Key,
+      });
+
+      const presignedUrl = await getSignedUrl(this.client, command, {
+        expiresIn: expirationSeconds,
+      });
+
+      log.info(`Generated presigned URL for ${s3Key} (expires in ${expirationSeconds}s)`);
+      return presignedUrl;
+    } catch (err) {
+      log.error(`Failed to generate presigned URL for ${s3Key}:`, err);
+      throw err;
+    }
   }
 
   /**

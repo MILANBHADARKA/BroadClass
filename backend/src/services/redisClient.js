@@ -295,6 +295,33 @@ export class RedisClient {
     });
     log.info('Subscribed to key expiration events');
   }
+
+  /**
+   * Publish a message to a Redis channel
+   * @param {string} channel - Channel name
+   * @param {string} message - Message to publish (will be stringified if object)
+   */
+  async publish(channel, message) {
+    const msg = typeof message === 'string' ? message : JSON.stringify(message);
+    return this.client.publish(channel, msg);
+  }
+
+  /**
+   * Subscribe to a Redis channel with a callback
+   * @param {string} channel - Channel name
+   * @param {Function} callback - Callback function (receives parsed message)
+   */
+  async subscribe(channel, callback) {
+    await this.subscriber.subscribe(channel, (message) => {
+      try {
+        const parsed = JSON.parse(message);
+        callback?.(parsed);
+      } catch {
+        callback?.(message);
+      }
+    });
+    log.info(`Subscribed to channel: ${channel}`);
+  }
 }
 
 export default RedisClient;

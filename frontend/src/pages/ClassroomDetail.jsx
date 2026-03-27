@@ -5,6 +5,7 @@ import { Device } from 'mediasoup-client';
 import { useAuth } from '../context/AuthContext';
 import BroadcastButton from '../components/BroadcastButton';
 import BroadcastList from '../components/BroadcastList';
+import RecordingLibrary from '../components/RecordingLibrary';
 
 // System-Manager (port 3000) for APIs and real-time updates
 const MANAGER_SERVER = import.meta.env.VITE_MANAGER_URL || 'http://localhost:3000';
@@ -131,10 +132,15 @@ export default function ClassroomDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-900 mesh-bg flex items-center justify-center">
-        <div className="flex items-center gap-3 text-text-muted">
-          <svg className="animate-spin w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-          Loading classroom...
+      <div className="min-h-screen bg-surface-950 mesh-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-accent flex items-center justify-center glow-accent animate-pulse-glow">
+            <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+          <p className="text-text-muted font-medium">Loading classroom...</p>
         </div>
       </div>
     );
@@ -142,12 +148,24 @@ export default function ClassroomDetail() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-surface-900 mesh-bg flex flex-col items-center justify-center gap-4 px-4">
-        <div className="bg-danger-muted border border-danger/30 text-red-300 px-6 py-4 rounded-xl text-sm max-w-md text-center">
-          {error}
+      <div className="min-h-screen bg-surface-950 mesh-bg flex flex-col items-center justify-center gap-6 px-4">
+        <div className="w-20 h-20 rounded-3xl bg-danger-muted flex items-center justify-center">
+          <svg className="w-10 h-10 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
         </div>
-        <button onClick={() => navigate('/dashboard')} className="px-5 py-2.5 rounded-xl bg-surface-800 border border-border text-text-secondary text-sm hover:bg-surface-700 transition-all cursor-pointer">
-          &larr; Back to Dashboard
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-text-primary mb-2">Unable to load classroom</h2>
+          <p className="text-text-muted max-w-md">{error}</p>
+        </div>
+        <button 
+          onClick={() => navigate('/dashboard')} 
+          className="btn-secondary"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          Back to Dashboard
         </button>
       </div>
     );
@@ -157,67 +175,97 @@ export default function ClassroomDetail() {
   const studentCount = classroom?._count?.enrollments ?? classroom?.enrollments?.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-surface-900 mesh-bg">
-      {/* ── Top Bar ───────────────────────────── */}
+    <div className="min-h-screen bg-surface-950 mesh-bg">
+      {/* Top Bar */}
       <nav className="sticky top-0 z-50 glass border-b border-border backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center gap-4">
-          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-text-muted hover:text-text-primary text-sm transition-colors cursor-pointer">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-            Dashboard
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard')} 
+            className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors cursor-pointer group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-surface-800 border border-border flex items-center justify-center group-hover:bg-surface-700 group-hover:border-border-hover transition-all">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </div>
+            <span className="text-sm font-medium hidden sm:block">Dashboard</span>
           </button>
-          <div className="h-5 w-px bg-border" />
-          <span className="text-sm font-semibold text-text-primary truncate">{classroom?.name}</span>
+          
+          <div className="h-6 w-px bg-border" />
+          
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-xl bg-gradient-accent flex items-center justify-center flex-shrink-0 glow-accent-sm">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold text-text-primary truncate">{classroom?.name}</h1>
+              {classroom?.subject && (
+                <p className="text-xs text-text-muted">{classroom.subject}</p>
+              )}
+            </div>
+          </div>
 
           {/* Connection status pill */}
-          <div className="ml-auto flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${isConnected ? 'bg-success-muted text-green-400' : 'bg-surface-800 text-text-muted'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-400 animate-pulse-live' : 'bg-text-muted'}`} />
-              {isConnected ? 'Live' : 'Offline'}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className={`badge ${isConnected ? 'badge-success' : 'bg-surface-800 text-text-muted border-border'}`}>
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse-live' : 'bg-text-muted'}`} />
+              {isConnected ? 'Connected' : 'Offline'}
+            </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* ── Classroom Info ──────────────────── */}
-        <div className="glass rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 animate-fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold text-text-primary">{classroom?.name}</h1>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Classroom Info */}
+        <div className="glass rounded-2xl p-6 mb-8 animate-fade-in glow-accent-sm">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 flex-wrap mb-3">
+                <h1 className="text-2xl lg:text-3xl font-bold text-gradient">{classroom?.name}</h1>
                 {classroom?.subject && (
-                  <span className="px-3 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-medium">
-                    {classroom.subject}
-                  </span>
+                  <span className="badge-accent">{classroom.subject}</span>
                 )}
               </div>
               {classroom?.description && (
-                <p className="text-text-muted text-sm mt-2 max-w-2xl">{classroom.description}</p>
+                <p className="text-text-muted max-w-2xl">{classroom.description}</p>
               )}
             </div>
 
-            <div className="flex items-center gap-3 shrink-0 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
               {isOwner && (
-                <span className="px-3 py-1.5 rounded-lg bg-warning-muted text-warning text-xs font-mono tracking-wider border border-warning/20">
-                  {classroom?.code}
-                </span>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-warning-muted border border-warning/20">
+                  <svg className="w-4 h-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                  </svg>
+                  <span className="text-warning font-mono tracking-[0.2em] text-sm">{classroom?.code}</span>
+                </div>
               )}
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-800 border border-border text-text-secondary text-xs">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-800 border border-border">
+                <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                 </svg>
-                {studentCount} student{studentCount !== 1 ? 's' : ''}
-              </span>
+                <span className="text-text-secondary text-sm font-medium">{studentCount} student{studentCount !== 1 ? 's' : ''}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ── Broadcast Area ─────────────────── */}
+        {/* Broadcast Area */}
         <div className="mb-8">
           {!device ? (
-            <div className="glass rounded-2xl p-12 flex flex-col items-center justify-center gap-3 animate-fade-in">
-              <svg className="animate-spin w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-              <p className="text-text-muted text-sm">Initializing media device...</p>
+            <div className="glass rounded-2xl p-16 flex flex-col items-center justify-center gap-4 animate-fade-in">
+              <div className="w-14 h-14 rounded-2xl bg-accent-muted flex items-center justify-center animate-pulse-glow">
+                <svg className="w-7 h-7 text-accent animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-text-primary font-medium mb-1">Initializing media device...</p>
+                <p className="text-text-muted text-sm">Setting up WebRTC connection</p>
+              </div>
             </div>
           ) : (
             <>
@@ -243,19 +291,39 @@ export default function ClassroomDetail() {
           )}
         </div>
 
-        {/* ── Enrolled Students ──────────────── */}
+        {/* Recording Library */}
+        <div className="mb-8">
+          <RecordingLibrary
+            classroomId={classroomId}
+            userRole={isTeacher ? 'teacher' : 'student'}
+          />
+        </div>
+
+        {/* Enrolled Students */}
         {isOwner && classroom?.enrollments?.length > 0 && (
           <div className="glass rounded-2xl p-6 animate-fade-in">
-            <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4">
-              Enrolled Students ({classroom.enrollments.length})
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {classroom.enrollments.map((e) => (
-                <div key={e.id} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800 border border-border text-sm text-text-primary">
-                  <div className="w-5 h-5 rounded-full bg-accent/10 flex items-center justify-center text-[10px] font-bold text-accent uppercase">
-                    {(e.student?.name || 'S')[0]}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-secondary-muted flex items-center justify-center">
+                <svg className="w-5 h-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-text-primary">Enrolled Students</h3>
+                <p className="text-sm text-text-muted">{classroom.enrollments.length} students in this class</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {classroom.enrollments.map((e, i) => (
+                <div 
+                  key={e.id} 
+                  className="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-surface-800 border border-border hover:border-border-hover transition-all animate-fade-in"
+                  style={{ animationDelay: `${i * 30}ms` }}
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center text-sm font-bold text-white">
+                    {(e.student?.name || 'S')[0].toUpperCase()}
                   </div>
-                  {e.student?.name || 'Student'}
+                  <span className="text-sm text-text-primary font-medium">{e.student?.name || 'Student'}</span>
                 </div>
               ))}
             </div>

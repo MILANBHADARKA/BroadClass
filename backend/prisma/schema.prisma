@@ -8,14 +8,14 @@ datasource db {
   provider = "postgresql"
 }
 
-// ── Enums ──────────────────────────────────────────────────
+// Enums 
 
 enum Role {
   TEACHER
   STUDENT
 }
 
-// ── Models ─────────────────────────────────────────────────
+// Models 
 
 model User {
   id        String   @id @default(uuid())
@@ -68,7 +68,7 @@ model Enrollment {
   @@index([classroomId])
 }
 
-// ── Recording & Permissions ─────────────────────────────────
+// Recording & Permissions
 
 enum RecordingStatus {
   RECORDING
@@ -93,8 +93,8 @@ model Recording {
   description String?
   
   // S3 Details
-  s3Key       String   @unique
-  s3Url       String
+  s3Key       String?  // null until upload begins
+  s3Url       String   @default("")
   duration    Int      @default(0) // seconds
   fileSize    BigInt   @default(0) // bytes
   
@@ -130,12 +130,12 @@ model RecordingPermission {
   userId      String   // can be teacher or student
   accessLevel String   @default("view") // "view", "edit", "revoke"
   grantedAt   DateTime @default(now())
-  grantedBy   String   // who granted this permission (teacher ID)
+  grantedBy   String?  // who granted this permission (teacher ID) - nullable for SetNull cascade
   
   // Relations
   recording Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
   user      User     @relation("RecordingPermissions", fields: [userId], references: [id], onDelete: Cascade)
-  grantedByUser User  @relation("GrantedPermissions", fields: [grantedBy], references: [id], onDelete: SetNull)
+  grantedByUser User? @relation("GrantedPermissions", fields: [grantedBy], references: [id], onDelete: SetNull)
   
   @@unique([recordingId, userId])
   @@index([recordingId])

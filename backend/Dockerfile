@@ -2,7 +2,7 @@ FROM node:22-slim
 
 WORKDIR /app/backend
 
-# Install build tools required by mediasoup
+# Install build tools required by mediasoup + FFmpeg for recording
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     gcc \
     linux-libc-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
@@ -28,8 +29,8 @@ RUN chmod +x /app/backend/start.sh
 # Generate Prisma client
 RUN npx prisma generate
 
-# Expose ports
-EXPOSE 3001 40000-40399/udp
+# Expose ports (WebRTC + Recording RTP)
+EXPOSE 3001 40000-40399/udp 45000-45999/udp
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

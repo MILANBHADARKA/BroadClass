@@ -14,6 +14,7 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,136 +43,277 @@ export default function RegisterPage() {
     }
   };
 
-  const inputClass =
-    'w-full px-4 py-3 rounded-xl bg-surface-800 border border-border text-text-primary placeholder-text-muted text-sm outline-none transition-all focus:border-accent/50 focus:ring-2 focus:ring-accent/10';
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-900 mesh-bg px-4 py-8">
-      {/* Decorative orbs */}
-      <div className="fixed top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none" />
-      <div className="fixed bottom-[-15%] left-[-10%] w-[400px] h-[400px] rounded-full bg-accent/5 blur-[120px] pointer-events-none" />
-
-      <div className="relative w-full max-w-md animate-fade-in">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center">
-              <svg className="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <div className="min-h-screen flex bg-surface-950 mesh-bg">
+      {/* Left side - Branding (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Animated gradient orbs */}
+        <div className="absolute top-1/3 right-1/4 w-96 h-96 rounded-full bg-secondary/20 blur-[100px] animate-float" />
+        <div className="absolute bottom-1/3 left-1/4 w-80 h-80 rounded-full bg-accent/20 blur-[100px] animate-float" style={{ animationDelay: '1.5s' }} />
+        <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full bg-accent/10 blur-[80px] animate-float" style={{ animationDelay: '0.5s' }} />
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center px-16 xl:px-24">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-12">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-accent flex items-center justify-center shadow-lg glow-accent">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-gradient">BroadClass</span>
+            <span className="text-3xl font-bold text-gradient">BroadClass</span>
           </div>
-          <p className="text-text-muted text-sm">Create your account</p>
-        </div>
-
-        {/* Card */}
-        <div className="glass rounded-2xl p-8 glow-accent-sm">
-          <h1 className="text-xl font-bold text-text-primary mb-1">Get started</h1>
-          <p className="text-text-muted text-sm mb-6">Join as a teacher or student</p>
-          <p className="text-red-600 text-sm mb-6">NOTE: Right now backend instaces are stopped, so if you want to test system then please contact admins.</p>
-
-          {error && (
-            <div className="bg-danger-muted border border-danger/30 text-red-300 px-4 py-3 rounded-xl text-sm mb-5 animate-fade-in">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
-                Full Name
-              </label>
-              <input id="name" type="text" placeholder="Enter Your Name" value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })} required className={inputClass} />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
-                Email
-              </label>
-              <input id="email" type="email" placeholder="Enter Your Name" value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })} required className={inputClass} />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="password" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
-                  Password
-                </label>
-                <input id="password" type="password" placeholder="Min 6 chars" value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })} required className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="confirmPassword" className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">
-                  Confirm
-                </label>
-                <input id="confirmPassword" type="password" placeholder="Re-enter" value={form.confirmPassword}
-                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} required className={inputClass} />
-              </div>
-            </div>
-
-            {/* Role selector */}
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-2 uppercase tracking-wider">
-                I am a
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setForm({ ...form, role: 'STUDENT' })}
-                  className={`relative py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer
-                    ${form.role === 'STUDENT'
-                      ? 'bg-accent/10 border-accent/40 text-accent glow-accent-sm'
-                      : 'bg-surface-800 border-border text-text-secondary hover:border-border-hover'
-                    }`}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
-                    </svg>
-                    Student
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setForm({ ...form, role: 'TEACHER' })}
-                  className={`relative py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer
-                    ${form.role === 'TEACHER'
-                      ? 'bg-accent/10 border-accent/40 text-accent glow-accent-sm'
-                      : 'bg-surface-800 border-border text-text-secondary hover:border-border-hover'
-                    }`}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                    </svg>
-                    Teacher
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-accent text-surface-900 font-semibold text-sm cursor-pointer transition-all hover:bg-accent-light hover:glow-accent disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-            >
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                  Creating account...
-                </span>
-              ) : 'Create Account'}
-            </button>
-          </form>
-
-          <p className="text-center mt-6 text-text-muted text-sm">
-            Already have an account?{' '}
-            <Link to="/login" className="text-accent font-semibold hover:text-accent-light transition-colors">
-              Sign in
-            </Link>
+          
+          <h1 className="text-5xl xl:text-6xl font-bold text-text-primary leading-tight mb-6">
+            Start your
+            <span className="block text-gradient">learning journey</span>
+          </h1>
+          
+          <p className="text-xl text-text-secondary max-w-md leading-relaxed mb-12">
+            Join many teachers and students in our interactive virtual classroom platform.
           </p>
+        </div>
+      </div>
+      
+      {/* Right side - Register Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-8">
+        {/* Decorative orbs for mobile */}
+        <div className="lg:hidden fixed top-[-15%] right-[-10%] w-[350px] h-[350px] rounded-full bg-secondary/10 blur-[100px] pointer-events-none" />
+        <div className="lg:hidden fixed bottom-[-15%] left-[-10%] w-[300px] h-[300px] rounded-full bg-accent/10 blur-[100px] pointer-events-none" />
+        
+        <div className="relative w-full max-w-md animate-fade-in-up">
+          {/* Mobile brand (hidden on desktop) */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-accent flex items-center justify-center shadow-lg glow-accent-sm">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <span className="text-2xl font-bold text-gradient">BroadClass</span>
+            </div>
+          </div>
+
+          {/* Card */}
+          <div className="glass rounded-3xl p-8 lg:p-10 glow-accent-sm">
+            <div className="mb-6">
+              <h1 className="text-2xl lg:text-3xl font-bold text-text-primary mb-2">Create account</h1>
+              <p className="text-text-muted">Join as a teacher or student</p>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-3 bg-danger-muted border border-danger/30 text-red-300 px-4 py-3 rounded-xl text-sm mb-5 animate-scale-in">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Full Name */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-2">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <input 
+                    id="name" 
+                    type="text" 
+                    placeholder="Name" 
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                    required 
+                    className="input pl-12" 
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
+                  Email address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <input 
+                    id="email" 
+                    type="email" 
+                    placeholder="you@example.com" 
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })} 
+                    required 
+                    className="input pl-12" 
+                  />
+                </div>
+              </div>
+
+              {/* Password fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <input 
+                      id="password" 
+                      type={showPassword ? 'text' : 'password'} 
+                      placeholder="Min 6 chars" 
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                      required 
+                      className="input pl-12" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-secondary mb-2">
+                    Confirm
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <input 
+                      id="confirmPassword" 
+                      type={showPassword ? 'text' : 'password'} 
+                      placeholder="Re-enter" 
+                      value={form.confirmPassword}
+                      onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} 
+                      required 
+                      className="input pl-12" 
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Show password toggle */}
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-text-muted hover:text-text-secondary transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                  className="w-4 h-4 rounded border-border bg-surface-800 text-accent focus:ring-accent/20 cursor-pointer"
+                />
+                Show passwords
+              </label>
+
+              {/* Role selector */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-3">
+                  I am a
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, role: 'STUDENT' })}
+                    className={`relative py-4 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer group
+                      ${form.role === 'STUDENT'
+                        ? 'bg-accent-muted border-accent/40 text-accent glow-accent-sm'
+                        : 'bg-surface-800 border-border text-text-secondary hover:border-border-hover hover:bg-surface-700'
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${form.role === 'STUDENT' ? 'bg-accent/20' : 'bg-surface-700 group-hover:bg-surface-600'}`}>
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
+                        </svg>
+                      </div>
+                      <span>Student</span>
+                    </div>
+                    {form.role === 'STUDENT' && (
+                      <div className="absolute top-2 right-2">
+                        <svg className="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, role: 'TEACHER' })}
+                    className={`relative py-4 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer group
+                      ${form.role === 'TEACHER'
+                        ? 'bg-accent-muted border-accent/40 text-accent glow-accent-sm'
+                        : 'bg-surface-800 border-border text-text-secondary hover:border-border-hover hover:bg-surface-700'
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${form.role === 'TEACHER' ? 'bg-accent/20' : 'bg-surface-700 group-hover:bg-surface-600'}`}>
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                        </svg>
+                      </div>
+                      <span>Teacher</span>
+                    </div>
+                    {form.role === 'TEACHER' && (
+                      <div className="absolute top-2 right-2">
+                        <svg className="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full py-3.5 text-base mt-2"
+              >
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Creating account...
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    Create Account
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-surface-800 text-text-muted">Already have an account?</span>
+              </div>
+            </div>
+
+            <Link 
+              to="/login" 
+              className="btn-secondary w-full justify-center py-3"
+            >
+              Sign in instead
+            </Link>
+          </div>
         </div>
       </div>
     </div>

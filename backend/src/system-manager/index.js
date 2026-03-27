@@ -26,7 +26,9 @@ import { managerConfig } from './config.js';
 import authRoutes from './authRoutes.js';
 import classroomRoutes from './classroomRoutes.js';
 import broadcastRoutes from './broadcastRoutes.js';
+import recordingRoutes from './recordingRoutes.js';
 import { registerSocketHandlers } from './socketHandlers.js';
+import S3RecordingService from '../services/s3Service.js';
 
 const log = createLogger('system-manager');
 
@@ -81,6 +83,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/classrooms', classroomRoutes);
 app.use('/api', broadcastRoutes);
+app.use('/api/recordings', recordingRoutes);
 
 /**
  * 404 handler
@@ -113,8 +116,26 @@ async function start() {
     await redisClient.connect(managerConfig.redisUrl);
     log.info('✅ Redis connected');
 
-    // 3. Expose redisClient globally for route handlers
+    // 3. Initialize S3 Recording Service (optional - for recording URLs)
+    let s3Service = null;
+    try {
+      s3Service = new S3RecordingService({
+        region: process.env.S3_REGION || 'us-east-1',
+        bucket: process.env.S3_BUCKET || 'broadclass',
+        prefix: process.env.S3_PREFIX || 'recordings',
+      });
+      if (s3Service.client) {
+        log.info('✅ S3 Service initialized');
+      } else {
+        log.warn('⚠️ S3 Service running without credentials (recording downloads disabled)');
+      }
+    } catch (err) {
+      log.warn('⚠️ S3 Service initialization failed (non-critical):', err.message);
+    }
+
+    // 4. Expose services globally for route handlers
     app.locals.redisClient = redisClient;
+    app.locals.s3Service = s3Service;
 
     // Register Socket.IO handlers (pass redisClient for pub/sub)
     const socketManager = registerSocketHandlers(io, redisClient);
@@ -131,6 +152,7 @@ async function start() {
       log.info('SIGTERM received, shutting down...');
       httpServer.close(async () => {
         try {
+          await s3Service.cleanup();
           await redisClient.disconnect();
           await prisma.$disconnect();
           log.info('Shutdown complete');

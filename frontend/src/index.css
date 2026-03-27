@@ -2,35 +2,49 @@
 
 /*
  * Custom Theme
- * Dark slate + electric teal accent. Unique, not template.
+ * Dark slate + purple/blue accents. Modern tech feel.
  */
 @theme {
-  --color-surface-900: #0b0e14;
+  /* Surface colors - dark slate backgrounds */
+  --color-surface-950: #030712;
+  --color-surface-900: #0a0f1a;
   --color-surface-800: #111827;
-  --color-surface-700: #1a2233;
-  --color-surface-600: #243044;
-  --color-surface-500: #334155;
+  --color-surface-700: #1e293b;
+  --color-surface-600: #334155;
+  --color-surface-500: #475569;
 
-  --color-accent: #06d6a0;
-  --color-accent-light: #34ebc0;
-  --color-accent-dark: #04a87d;
-  --color-accent-muted: rgba(6, 214, 160, 0.12);
-  --color-accent-glass: rgba(6, 214, 160, 0.06);
+  /* Primary accent - Vibrant purple/violet */
+  --color-accent: #8b5cf6;
+  --color-accent-light: #a78bfa;
+  --color-accent-dark: #7c3aed;
+  --color-accent-muted: rgba(139, 92, 246, 0.15);
+  --color-accent-glass: rgba(139, 92, 246, 0.08);
 
+  /* Secondary accent - Electric blue */
+  --color-secondary: #3b82f6;
+  --color-secondary-light: #60a5fa;
+  --color-secondary-dark: #2563eb;
+  --color-secondary-muted: rgba(59, 130, 246, 0.15);
+
+  /* Status colors */
   --color-danger: #ef4444;
-  --color-danger-muted: rgba(239, 68, 68, 0.12);
+  --color-danger-muted: rgba(239, 68, 68, 0.15);
   --color-warning: #f59e0b;
-  --color-warning-muted: rgba(245, 158, 11, 0.12);
+  --color-warning-muted: rgba(245, 158, 11, 0.15);
   --color-success: #22c55e;
-  --color-success-muted: rgba(34, 197, 94, 0.12);
+  --color-success-muted: rgba(34, 197, 94, 0.15);
 
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #94a3b8;
+  /* Text colors */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
   --color-text-muted: #64748b;
 
+  /* Border colors */
   --color-border: rgba(148, 163, 184, 0.1);
   --color-border-hover: rgba(148, 163, 184, 0.2);
+  --color-border-accent: rgba(139, 92, 246, 0.3);
 
+  /* Fonts */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
@@ -42,58 +56,149 @@
   }
 
   body {
-    @apply bg-surface-900 text-text-primary font-sans antialiased;
+    @apply bg-surface-950 text-text-primary font-sans antialiased;
   }
 
   ::selection {
-    background: rgba(6, 214, 160, 0.3);
+    background: rgba(139, 92, 246, 0.4);
     color: #fff;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface-900);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-600);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-surface-500);
   }
 }
 
-/* Utility layer */
+/* ── Utility Classes ────────────────────────────────── */
+
+/* Glass morphism effects */
 @utility glass {
-  background: rgba(17, 24, 39, 0.6);
+  background: rgba(17, 24, 39, 0.7);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+}
+
+@utility glass-light {
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
 }
 
 @utility glass-hover {
-  background: rgba(17, 24, 39, 0.75);
+  background: rgba(30, 41, 59, 0.8);
   border-color: var(--color-border-hover);
 }
 
+/* Glow effects */
 @utility glow-accent {
-  box-shadow: 0 0 20px rgba(6, 214, 160, 0.15), 0 0 60px rgba(6, 214, 160, 0.05);
+  box-shadow: 
+    0 0 20px rgba(139, 92, 246, 0.2),
+    0 0 40px rgba(139, 92, 246, 0.1),
+    0 0 80px rgba(139, 92, 246, 0.05);
 }
 
 @utility glow-accent-sm {
-  box-shadow: 0 0 10px rgba(6, 214, 160, 0.1);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
 }
 
+@utility glow-secondary-sm {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+}
+
+@utility glow-blue {
+  box-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.2),
+    0 0 40px rgba(59, 130, 246, 0.1);
+}
+
+@utility glow-live {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Background effects */
 @utility mesh-bg {
   background-image:
-    radial-gradient(at 20% 80%, rgba(6, 214, 160, 0.06) 0, transparent 50%),
-    radial-gradient(at 80% 20%, rgba(99, 102, 241, 0.04) 0, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(6, 214, 160, 0.02) 0, transparent 70%);
+    radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.08) 0, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.06) 0, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(139, 92, 246, 0.04) 0, transparent 50%);
 }
 
+@utility mesh-bg-alt {
+  background-image:
+    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0, transparent 40%),
+    radial-gradient(at 0% 50%, rgba(59, 130, 246, 0.08) 0, transparent 40%);
+}
+
+/* Text gradients */
 @utility text-gradient {
-  background: linear-gradient(135deg, var(--color-accent), #6366f1);
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Keyframes */
+@utility text-gradient-subtle {
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-accent-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Button gradient backgrounds */
+@utility bg-gradient-accent {
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-secondary) 100%);
+}
+
+@utility bg-gradient-accent-hover {
+  background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-secondary-light) 100%);
+}
+
+/* ── Keyframe Animations ────────────────────────────── */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 @keyframes pulse-live {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(139, 92, 246, 0.15); }
+  50% { box-shadow: 0 0 25px rgba(139, 92, 246, 0.3); }
 }
 
 @keyframes shimmer {
@@ -101,16 +206,153 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Animation utilities */
 @utility animate-fade-in {
   animation: fade-in 0.4s ease-out both;
+}
+
+@utility animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+@utility animate-scale-in {
+  animation: scale-in 0.3s ease-out both;
+}
+
+@utility animate-slide-in-right {
+  animation: slide-in-right 0.4s ease-out both;
 }
 
 @utility animate-pulse-live {
   animation: pulse-live 1.5s ease-in-out infinite;
 }
 
+@utility animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
 @utility animate-shimmer {
-  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.03) 50%, transparent 75%);
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.05) 50%, transparent 75%);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+@utility animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@utility animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* ── Component Utilities ────────────────────────────── */
+
+/* Cards */
+@utility card {
+  @apply glass rounded-2xl p-6 transition-all duration-300;
+}
+
+@utility card-hover {
+  @apply hover:glass-hover hover:glow-accent-sm hover:-translate-y-0.5;
+}
+
+/* Inputs */
+@utility input {
+  @apply w-full px-4 py-3 rounded-xl bg-surface-800 border border-border 
+         text-text-primary placeholder-text-muted text-sm outline-none 
+         transition-all duration-200
+         focus:border-accent/50 focus:ring-2 focus:ring-accent/10;
+}
+
+/* Buttons */
+@utility btn-primary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl 
+         bg-gradient-accent text-white font-semibold text-sm 
+         transition-all duration-200 cursor-pointer
+         hover:bg-gradient-accent-hover hover:glow-accent-sm hover:-translate-y-0.5
+         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+}
+
+@utility btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl 
+         bg-surface-700 border border-border text-text-primary font-medium text-sm 
+         transition-all duration-200 cursor-pointer
+         hover:bg-surface-600 hover:border-border-hover
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+@utility btn-danger {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl 
+         bg-danger text-white font-semibold text-sm 
+         transition-all duration-200 cursor-pointer
+         hover:bg-red-600 hover:glow-live
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+@utility btn-icon {
+  @apply p-2.5 rounded-xl border border-border bg-surface-800 
+         text-text-primary transition-all duration-200 cursor-pointer
+         hover:bg-surface-700 hover:border-border-hover;
+}
+
+/* Badge/Pills */
+@utility badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+}
+
+@utility badge-accent {
+  @apply badge bg-accent-muted text-accent border border-accent/20;
+}
+
+@utility badge-success {
+  @apply badge bg-success-muted text-green-400 border border-green-500/20;
+}
+
+@utility badge-warning {
+  @apply badge bg-warning-muted text-amber-400 border border-amber-500/20;
+}
+
+@utility badge-danger {
+  @apply badge bg-danger-muted text-red-400 border border-red-500/20;
+}
+
+@utility badge-live {
+  @apply badge bg-red-500/90 text-white backdrop-blur-sm;
+}
+
+/* Tooltip (CSS only) - using regular CSS for pseudo-elements */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: var(--color-surface-700);
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
 }

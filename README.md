@@ -1,86 +1,53 @@
 # BroadClass
 
-A scalable one-to-many live classroom broadcast platform using mediasoup, Socket.IO, Express, and React. Built with modern **ES Modules (ESM)** and production-grade architecture.
+BroadClass is a scalable, real-time live broadcasting and online classroom platform. It leverages WebRTC for low-latency streaming, an Edge-Origin architecture for handling high volumes of concurrent viewers, and cloud-native integrations for seamless recording and archiving.
 
-## Features
-- 🎥 Start a broadcast with camera and microphone
-- 📋 View list of active broadcasts
-- 👁️ Watch any active broadcast in real-time
-- 🎛️ Camera/mic on/off controls during broadcast
-- 📊 Adaptive video quality (Simulcast)
-- ⚡ Multi-worker architecture (scales with CPU cores)
-- 🔧 Production-ready with proper resource management
-- 🌐 Modern ES Modules syntax throughout
+## 🚀 Features
 
-## Setup Instructions
+- **Real-Time Broadcasting:** Ultra low-latency video and audio streaming using Mediasoup (WebRTC).
+- **Scalable Architecture:** Origin-Edge topology that scales horizontally to support thousands of concurrent viewers.
+- **Role-Based Access Control:** Secure authentication and authorization differentiating between Teachers (Broadcasters) and Viewers.
+- **Live Recording & Archiving:** On-the-fly stream interception and trans-muxing via FFmpeg, with direct multipart uploads to AWS S3.
+- **Cloud-Ready:** Containerized with Docker and Docker Compose, utilizing Redis for real-time Pub/Sub coordination and scaling.
+- **Recording Library:** A dedicated panel for instructors to manage, publish, and review past broadcast recordings.
 
-### Backend Setup
-1. Navigate to backend directory:
-   ```bash
-   cd backend
-   ```
+## 🏗️ Architecture
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+The system is broken down into three primary backend node types alongside a responsive React frontend:
 
-3. Start the server:
-   ```bash
-   npm start
-   ```
-   
-   Server will run on `http://localhost:3001`
+- **System Manager:** Handles HTTP APIs, user authentication, role verification, database transactions (Prisma), and triggers cross-service events via Redis Pub/Sub.
+- **Origin Server:** The core WebRTC media server. It handles publisher streams and manages the stream capture pipeline for recording directly to AWS.
+- **Edge Servers:** Globally distributable relay nodes that consume from the Origin server and serve WebRTC streams to end-user viewers, offloading media processing and bandwidth from the Origin.
 
-### Frontend Setup
-1. Navigate to frontend directory:
-   ```bash
-   cd frontend
-   ```
+## 💻 Tech Stack
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+**Frontend:**
+- React.js (Vite)
+- WebRTC & Mediasoup Client
+- Context API (State & Authentication)
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-   
-   Frontend will run on `https://broadclass.xyz`
+**Backend:**
+- Node.js & Express
+- Mediasoup (WebRTC Media Server)
+- Prisma ORM (Database Management)
+- Redis (Pub/Sub & Real-time Signaling)
+- FFmpeg (Media processing & chunking)
+- AWS SDK (S3 for video storage)
 
-## Usage
+**Infrastructure:**
+- Docker & Docker Compose
+- AWS (S3 for recordings)
 
-1. Open the frontend in your browser
-2. Enter a Room ID and click "Start Broadcast" to begin broadcasting
-3. Your camera and microphone will be activated
-4. Other users can see your broadcast in the "Active Broadcasts" list
-5. Click "View Broadcast" on any active broadcast to watch it
-6. Click "Stop Broadcast" to end your broadcast
+## 🎥 Recording Pipeline Infrastructure
 
-## Technology Stack
+BroadClass features a highly optimized recording pipeline:
+1. The **System Manager** receives an authorized recording start request and emits a \
+ecording:control\ event via Redis.
+2. The **Origin Server** intercepts the live RTP streams using a local Mediasoup consumer.
+3. Raw streams are piped into a locally spawned **FFmpeg** process.
+4. Video and audio are muxed on-the-fly (\-c copy\) without heavy transcoding.
+5. Emitted MP4 chunks are uploaded asynchronously using **AWS S3 Multipart Uploads**.
 
-### Backend
-- **Express**: Web server framework
-- **Socket.IO**: Real-time bidirectional communication
-- **mediasoup**: WebRTC SFU for media streaming
+## 📄 License
 
-### Frontend
-- **React**: UI framework
-- **Vite**: Build tool and dev server
-- **Socket.IO Client**: Real-time communication with backend
-- **mediasoup-client**: WebRTC client for media handling
-
-## Architecture
-
-- **Broadcaster**: Uses producer transport to send audio/video to server
-- **Viewers**: Use consumer transport to receive audio/video from server
-- **Server**: Acts as SFU (Selective Forwarding Unit) routing media streams
-- **Rooms**: Each broadcast has a unique room ID for isolation
-
-## Notes
-
-- Make sure to allow camera and microphone permissions in your browser
-- For production, update the `announcedIp` in server.js to your actual server IP
-- The system uses VP8 for video and Opus for audio codecs
+This project is licensed under the MIT License.

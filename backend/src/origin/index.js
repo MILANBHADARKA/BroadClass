@@ -6,6 +6,7 @@ import { createWorkers, createWorkerPool } from '../services/mediasoupService.js
 import { RedisClient } from '../services/redisClient.js';
 import { registerOriginRoutes } from './routes.js';
 import { registerOriginSocketHandlers } from './socketHandlers.js';
+import { OriginRecordingHandler } from './recordingHandler.js';
 import { createLogger } from '../utils/logger.js';
 import edgeRegistryRoutes from './edgeRegistryRoutes.js';
 import { setupEdgeProxy } from './edgeProxy.js';
@@ -97,12 +98,18 @@ async function start() {
   // Socket.IO auth middleware
   io.use(socketAuthMiddleware);
 
+  // Initialize recording handler with Socket.IO for real-time events
+  const recordingHandler = new OriginRecordingHandler(redisClient, getNextWorker, io);
+  app.locals.recordingHandler = recordingHandler;
+  await recordingHandler.setupRedisListeners();
+  log.info('Recording handler initialized');
+
   // Redis pub/sub → live viewer count updates
   await redisClient.subscribeToViewerCount((payload) => {
     io.emit('viewerCount', payload);
   });
 
-  registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker });
+  registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker, recordingHandler });
 
   // 5. Listen
   httpServer.listen(config.port, () => {
@@ -175,6 +182,9 @@ async function start() {
 
     // Cleanup workers
     workers.forEach((w) => { try { w.close(); } catch (_) {} });
+
+    // Shutdown recording handler
+    await recordingHandler.shutdown();
 
     // Disconnect services
     await prisma.$disconnect();
