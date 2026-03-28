@@ -7,11 +7,8 @@
  * - Smart edge routing (best-edge API)
  * - Real-time broadcast updates via Socket.IO + Redis pub/sub
  * - Recording metadata API (future)
- *
- * Does NOT handle:
- * - Media processing (Origin handles)
- * - Edge server management (Origin handles)
- */
+ * */
+
 import express from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http';

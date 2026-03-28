@@ -1,7 +1,5 @@
 /**
  * Internal Edge Registry API
- *
- * These endpoints are called by Edge servers to register/deregister themselves.
  * Protected by an internal API key (not user-facing).
  *
  * POST /api/internal/register-edge   – Edge registers itself on boot

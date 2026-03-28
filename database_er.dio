@@ -1,0 +1,200 @@
+<mxfile host="65bd71144e">
+    <diagram id="database-er" name="Database ER Diagram">
+        <mxGraphModel dx="1584" dy="1126" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="BroadClass Database ER Diagram" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="20" width="400" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="userTable" value="User" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="100" width="220" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="userId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#1565C0;" parent="userTable" vertex="1">
+                    <mxGeometry y="30" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="userName" value="name: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                    <mxGeometry y="54" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="userEmail" value="email: String (UNIQUE)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                    <mxGeometry y="78" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="userPassword" value="password: String (bcrypt hash)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                    <mxGeometry y="102" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="userRole" value="role: Role (TEACHER | STUDENT)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                    <mxGeometry y="126" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="userCreatedAt" value="createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                    <mxGeometry y="150" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="userUpdatedAt" value="updatedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                    <mxGeometry y="174" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classroomTable" value="Classroom" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="100" width="220" height="224" as="geometry"/>
+                </mxCell>
+                <mxCell id="classId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#2E7D32;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="30" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="className" value="name: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="54" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classDesc" value="description: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="78" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classSubject" value="subject: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="102" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classCode" value="code: String (UNIQUE, 6-char)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="126" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classTeacherId" value="teacherId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="150" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classCreatedAt" value="createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="174" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classUpdatedAt" value="updatedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="198" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="enrollmentTable" value="Enrollment" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="370" width="220" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="enrollId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#B45309;" parent="enrollmentTable" vertex="1">
+                    <mxGeometry y="30" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="enrollClassId" value="classroomId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="enrollmentTable" vertex="1">
+                    <mxGeometry y="54" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="enrollStudentId" value="studentId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="enrollmentTable" vertex="1">
+                    <mxGeometry y="78" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="enrollJoinedAt" value="joinedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="enrollmentTable" vertex="1">
+                    <mxGeometry y="102" width="220" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recordingTable" value="Recording" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="100" width="240" height="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="recId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#B91C1C;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="30" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recClassId" value="classroomId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="54" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recTeacherId" value="teacherId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="78" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recBroadcastId" value="broadcastId: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="102" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recTitle" value="title: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="126" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recDesc" value="description: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="150" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recS3Key" value="s3Key: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="174" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recS3Url" value="s3Url: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="198" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recDuration" value="duration: Int (seconds)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="222" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recFileSize" value="fileSize: BigInt (bytes)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="246" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recStatus" value="status: RecordingStatus (Enum)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="270" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recAccessType" value="accessType: AccessType (Enum)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="294" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recStarted" value="recordingStarted: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="318" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recEnded" value="recordingEnded: DateTime?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="342" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565C0;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="userId" target="classTeacherId" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel1Label" value="owns" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#1565C0;" parent="rel1" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="userId" target="enrollStudentId" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel2Label" value="enrolls" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#6c8ebf;" parent="rel2" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="classId" target="enrollClassId" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="380" y="130"/>
+                            <mxPoint x="380" y="424"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel3Label" value="has" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#82b366;" parent="rel3" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="classId" target="recClassId" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel4Label" value="has recordings" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#82b366;" parent="rel4" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="userId" target="recTeacherId" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="340" y="178"/>
+                            <mxPoint x="340" y="80"/>
+                            <mxPoint x="720" y="80"/>
+                            <mxPoint x="720" y="178"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel5Label" value="creates" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#6c8ebf;" parent="rel5" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="enumsBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=1;" parent="1" vertex="1">
+                    <mxGeometry x="795" y="530" width="560" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="enumsTitle" value="Enums" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1035" y="535" width="80" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="roleEnum" value="Role&#xa;- TEACHER&#xa;- STUDENT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="570" width="120" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="statusEnum" value="RecordingStatus&#xa;- RECORDING&#xa;- PROCESSING&#xa;- READY&#xa;- FAILED&#xa;- ARCHIVED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="570" width="130" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="accessEnum" value="AccessType&#xa;- PRIVATE&#xa;- CLASSROOM&#xa;- PUBLIC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1220" y="570" width="120" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="indexesBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="530" width="520" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="indexesTitle" value="Indexes" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="535" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="indexesList" value="Classroom: teacherId, code (unique)&lt;br&gt;Enrollment: studentId, classroomId, [classroomId, studentId] (unique)&lt;br&gt;Recording: classroomId, teacherId, status, recordingStarted" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;spacingLeft=10;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="555" width="500" height="50" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

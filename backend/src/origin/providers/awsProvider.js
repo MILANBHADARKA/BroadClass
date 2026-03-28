@@ -7,12 +7,6 @@
  *
  * Requirements:
  *   npm install @aws-sdk/client-auto-scaling @aws-sdk/client-ec2
- *
- * AWS Setup Required:
- *   1. Create Launch Template with edge server AMI
- *   2. Create Auto Scaling Group using the Launch Template
- *   3. Configure user-data to start edge server on boot
- *   4. Set IAM role with auto-scaling permissions
  */
 
 import { createLogger } from '../../utils/logger.js';
@@ -77,9 +71,7 @@ export class AwsProvider {
     this._initialized = true;
   }
 
-  /* ================================================================ */
   /*  Provider Interface                                              */
-  /* ================================================================ */
 
   /**
    * Scale up: Increase ASG desired capacity by 1.

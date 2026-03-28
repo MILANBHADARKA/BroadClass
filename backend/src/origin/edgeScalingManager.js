@@ -1,11 +1,6 @@
 /**
  * Edge Auto-Scaling Manager
- *
- * Monitors edge server utilization and dynamically scales the fleet:
- *   - Scales UP when any edge exceeds the load threshold
- *   - Scales DOWN when ALL edges are below the low-water mark (only removes empty edges)
- *   - Respects min/max edge counts and cooldown periods
- *
+
  * Uses AWS Auto Scaling Group (ASG) via AwsProvider to adjust desired capacity.
  */
 
@@ -46,9 +41,7 @@ export class EdgeScalingManager {
     this._running       = false;
   }
 
-  /* ================================================================ */
   /*  Lifecycle                                                       */
-  /* ================================================================ */
 
   async start() {
     log.info(
@@ -75,9 +68,7 @@ export class EdgeScalingManager {
     log.info('Autoscaler stopped');
   }
 
-  /* ================================================================ */
   /*  Core loop                                                       */
-  /* ================================================================ */
 
   async _tick() {
     try {
@@ -89,7 +80,7 @@ export class EdgeScalingManager {
         return;
       }
 
-      // ---- Scale UP ------------------------------------------------
+      // Scale UP
       const maxLoad = Math.max(...edges.map(e => e.loadPct));
 
       if (maxLoad >= this.config.scaleUpThreshold && edges.length < this.config.maxEdges) {
@@ -106,7 +97,7 @@ export class EdgeScalingManager {
         );
       }
 
-      // ---- Scale DOWN ----------------------------------------------
+      // Scale DOWN
       if (edges.length > this.config.minEdges) {
         const allLow = edges.every(e => e.loadPct <= this.config.scaleDownThreshold);
 
@@ -131,9 +122,7 @@ export class EdgeScalingManager {
     }
   }
 
-  /* ================================================================ */
   /*  Scaling actions                                                 */
-  /* ================================================================ */
 
   async _scaleUp() {
     try {
@@ -167,9 +156,7 @@ export class EdgeScalingManager {
     }
   }
 
-  /* ================================================================ */
   /*  Ensure minimum fleet size                                       */
-  /* ================================================================ */
 
   async _ensureMinimumEdges() {
     const edges   = await this._getEdgeStatuses();
@@ -184,9 +171,7 @@ export class EdgeScalingManager {
     }
   }
 
-  /* ================================================================ */
-  /*  Helpers                                                         */
-  /* ================================================================ */
+  /*  Helpers   
 
   /** Read edge health data from Redis */
   async _getEdgeStatuses() {
@@ -233,9 +218,7 @@ export class EdgeScalingManager {
     }
   }
 
-  /* ================================================================ */
   /*  Status (exposed via API)                                        */
-  /* ================================================================ */
 
   async getStatus() {
     const managed = await this._getManagedEdgeIds();

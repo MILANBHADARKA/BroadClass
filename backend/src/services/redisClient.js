@@ -49,9 +49,14 @@ export class RedisClient {
     this.client = redis.createClient(clientConfig);
     this.subscriber = this.client.duplicate();
 
+    // Error handlers for BOTH client and subscriber to prevent crashes
     this.client.on('error', (err) => log.error('Client error:', err.message));
     this.client.on('connect', () => log.info('Connected'));
     this.client.on('reconnecting', () => log.warn('Reconnecting...'));
+
+    this.subscriber.on('error', (err) => log.error('Subscriber error:', err.message));
+    this.subscriber.on('connect', () => log.info('Subscriber connected'));
+    this.subscriber.on('reconnecting', () => log.warn('Subscriber reconnecting...'));
 
     await this.client.connect();
     await this.subscriber.connect();

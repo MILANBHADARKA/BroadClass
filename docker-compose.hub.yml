@@ -1,44 +1,45 @@
 services:
-  # LOCAL REDIS (OPTIONAL)
-  # Only needed if NOT using cloud Redis (Upstash).
-  redis:
-    image: redis:7-alpine
-    container_name: broadcast-redis
-    profiles: ["local-redis"]
+  # System Manager
+  system-manager:
+    image: milanbhadarka/broadclass-system-manager:latest
+    container_name: broadclass-system-manager
     ports:
-      - "6379:6379"
-    command:              
-      - redis-server
-      - --appendonly
-      - "yes"
-      - --maxmemory
-      - "256mb"
-      - --maxmemory-policy
-      - "allkeys-lru"
-      - --requirepass
-      - "${REDIS_PASSWORD:-broadcast123}"
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=${NODE_ENV:-production}
+      - ROLE=SYSTEM_MANAGER
+      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+      - JWT_EXPIRES_IN=7d
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # S3 Recording Configuration
+      - S3_BUCKET=${S3_BUCKET:-broadclass}
+      - S3_REGION=${S3_REGION:-ap-south-1}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_PREFIX=${S3_PREFIX:-recordings}
     restart: unless-stopped
+    stop_grace_period: 10s
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-broadcast123}", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - broadclass-network
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-broadcast123}
 
   # Origin Server
   origin-server:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: origin
+    image: milanbhadarka/broadclass-origin:latest
     container_name: broadclass-origin
     ports:
       - "3001:3001"
       - "40000-40399:40000-40399/udp"
-      - "45000-45999:45000-45999/udp"  # Recording RTP ports
+      - "45000-45999:45000-45999/udp"
     environment:
       - PORT=3001
       - NODE_ENV=${NODE_ENV:-production}
@@ -61,54 +62,10 @@ services:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_PREFIX=${S3_PREFIX:-recordings}
-    # Uncomment if using local Redis:
-    # depends_on:
-    #   redis:
-    #     condition: service_healthy
     restart: unless-stopped
     stop_grace_period: 40s
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-
-    networks:
-      - broadclass-network
-
-  # System Manager
-  system-manager:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.manager
-    container_name: broadclass-system-manager
-    ports:
-      - "3000:3000"
-    environment:
-      - PORT=3000
-      - NODE_ENV=${NODE_ENV:-production}
-      - ROLE=SYSTEM_MANAGER
-      - REDIS_URL=${REDIS_URL}
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
-      - JWT_EXPIRES_IN=7d
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      # S3 Recording Configuration
-      - S3_BUCKET=${S3_BUCKET:-broadclass}
-      - S3_REGION=${S3_REGION:-ap-south-1}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_PREFIX=${S3_PREFIX:-recordings}
-    # Uncomment if using local Redis:
-    # depends_on:
-    #   redis:
-    #     condition: service_healthy
-    restart: unless-stopped
-    stop_grace_period: 10s
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -118,10 +75,7 @@ services:
 
   # Edge Server 1
   edge-server-1:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: edge
+    image: milanbhadarka/broadclass-edge:latest
     container_name: broadclass-edge-1
     ports:
       - "3002:3002"
@@ -142,7 +96,7 @@ services:
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=50000
       - RTC_MAX_PORT=50399
@@ -156,10 +110,7 @@ services:
 
   # Edge Server 2
   edge-server-2:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: edge
+    image: milanbhadarka/broadclass-edge:latest
     container_name: broadclass-edge-2
     ports:
       - "3003:3002"
@@ -180,7 +131,7 @@ services:
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=54000
       - RTC_MAX_PORT=54399
@@ -194,10 +145,7 @@ services:
 
   # Edge Server 3
   edge-server-3:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: edge
+    image: milanbhadarka/broadclass-edge:latest
     container_name: broadclass-edge-3
     ports:
       - "3004:3002"
@@ -218,7 +166,7 @@ services:
       - MAX_CAPACITY=200
       - HEALTH_CHECK_INTERVAL=10000
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - NUM_WORKERS=2
       - RTC_MIN_PORT=52000
       - RTC_MAX_PORT=52399
@@ -229,11 +177,6 @@ services:
     stop_grace_period: 10s
     networks:
       - broadclass-network
-
-# Uncomment if using local Redis:
-# volumes:
-#   redis-data:
-#     driver: local
 
 networks:
   broadclass-network:

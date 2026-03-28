@@ -1,8 +1,51 @@
+# Dependencies (will be installed fresh in container)
 node_modules
 npm-debug.log*
-.env
+yarn-debug.log*
+yarn-error.log*
+
+# Git
 .git
 .gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
 *.md
+
+# Docker files
 Dockerfile*
+docker-compose*.yml
 .dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Test files
+__tests__
+*.test.js
+*.spec.js
+coverage
+
+# Temporary
+tmp
+temp
+*.tmp
+
+# AWS credentials
+aws/credentials
+.aws
