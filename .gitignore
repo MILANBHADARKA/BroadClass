@@ -5,7 +5,6 @@ requrements.txt
 .md_files
 
 .env 
-.env.*
 
 backend/aws
 

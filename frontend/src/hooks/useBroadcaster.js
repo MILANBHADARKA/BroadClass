@@ -19,7 +19,7 @@ export default function useBroadcaster({ socket, device }) {
   const audioProducerRef = useRef(null);
   const cameraStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
-  
+
   // Canvas compositing refs for PiP mode
   const canvasRef = useRef(null);
   const canvasCtxRef = useRef(null);
@@ -28,6 +28,12 @@ export default function useBroadcaster({ socket, device }) {
   const cameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
   const isCompositingActiveRef = useRef(false);
+
+  // Refs that mirror state to avoid stale closures in event handlers
+  const isScreenSharingRef = useRef(false);
+  const screenShareModeRef = useRef('screen-only');
+  // Always points to the latest stopScreenShare — used by the onended handler
+  const stopScreenShareFnRef = useRef(null);
 
   // Cleanup animation frame on unmount
   useEffect(() => {
@@ -57,6 +63,7 @@ export default function useBroadcaster({ socket, device }) {
 
       setIsBroadcasting(true);
       setIsScreenSharing(false);
+      isScreenSharingRef.current = false;
       cameraStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -124,7 +131,7 @@ export default function useBroadcaster({ socket, device }) {
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
     compositeStreamRef.current?.getTracks().forEach((t) => t.stop());
     transportRef.current?.close();
-    
+
     transportRef.current = null;
     videoProducerRef.current = null;
     audioProducerRef.current = null;
@@ -139,7 +146,9 @@ export default function useBroadcaster({ socket, device }) {
     setLocalStream(null);
     setIsCameraOn(true);
     setIsMicOn(true);
+    isScreenSharingRef.current = false;
     setIsScreenSharing(false);
+    screenShareModeRef.current = 'screen-only';
     setScreenShareMode('screen-only');
   }, [socket]);
 
@@ -158,7 +167,7 @@ export default function useBroadcaster({ socket, device }) {
   const stopCompositing = useCallback(() => {
     // Mark compositing as inactive
     isCompositingActiveRef.current = false;
-    
+
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -248,7 +257,7 @@ export default function useBroadcaster({ socket, device }) {
       screenVideo.srcObject = screenMediaStream;
       screenVideoRef.current._screenTrack = clonedScreenTrack;
     }
-    
+
     // For camera, clone the track to avoid affecting the original
     const cameraTrack = cameraStream?.getVideoTracks()[0];
     if (cameraTrack) {
@@ -274,29 +283,29 @@ export default function useBroadcaster({ socket, device }) {
         return;
       }
 
-      // Get current pip settings from refs 
+      // Get current pip settings from refs (updated by changePipPosition/changePipSize)
       const currentSize = pipSizeRef.current;
       const currentPosition = pipPositionRef.current;
       const pip = pipSizes[currentSize] || pipSizes.medium;
-      
+
       // Calculate PiP position
       let posX, posY;
       switch (currentPosition) {
-        case 'top-left': 
-          posX = padding; 
-          posY = padding; 
+        case 'top-left':
+          posX = padding;
+          posY = padding;
           break;
-        case 'top-right': 
-          posX = canvas.width - pip.width - padding; 
-          posY = padding; 
+        case 'top-right':
+          posX = canvas.width - pip.width - padding;
+          posY = padding;
           break;
-        case 'bottom-left': 
-          posX = padding; 
-          posY = canvas.height - pip.height - padding; 
+        case 'bottom-left':
+          posX = padding;
+          posY = canvas.height - pip.height - padding;
           break;
         case 'bottom-right':
-        default: 
-          posX = canvas.width - pip.width - padding; 
+        default:
+          posX = canvas.width - pip.width - padding;
           posY = canvas.height - pip.height - padding;
       }
 
@@ -307,7 +316,7 @@ export default function useBroadcaster({ socket, device }) {
       if (screenVideo.paused && screenVideo.srcObject) {
         screenVideo.play().catch(() => {});
       }
-      
+
       try {
         if (screenVideo.videoWidth > 0) {
           ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
@@ -328,17 +337,17 @@ export default function useBroadcaster({ socket, device }) {
       // Draw camera PiP (circular)
       if (cameraVideo.videoWidth > 0) {
         ctx.save();
-        
+
         // Create circular clip path
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
         ctx.closePath();
         ctx.clip();
-        
+
         // Draw camera video within circle (center crop)
         const videoAspect = cameraVideo.videoWidth / cameraVideo.videoHeight;
         let sourceX = 0, sourceY = 0, sourceWidth = cameraVideo.videoWidth, sourceHeight = cameraVideo.videoHeight;
-        
+
         if (videoAspect > 1) {
           sourceWidth = cameraVideo.videoHeight;
           sourceX = (cameraVideo.videoWidth - sourceWidth) / 2;
@@ -346,13 +355,13 @@ export default function useBroadcaster({ socket, device }) {
           sourceHeight = cameraVideo.videoWidth;
           sourceY = (cameraVideo.videoHeight - sourceHeight) / 2;
         }
-        
+
         ctx.drawImage(
           cameraVideo,
           sourceX, sourceY, sourceWidth, sourceHeight,
           posX, posY, pip.width, pip.height
         );
-        
+
         ctx.restore();
       } else {
         // Camera not ready - draw a dark circle placeholder
@@ -363,7 +372,7 @@ export default function useBroadcaster({ socket, device }) {
         ctx.fill();
         ctx.restore();
       }
-      
+
       // Always draw border around PiP
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
@@ -402,12 +411,12 @@ export default function useBroadcaster({ socket, device }) {
           screenVideo.play().catch(() => {}),
           cameraVideo.play().catch(() => {})
         ]);
-        
+
         await Promise.all([
           waitForVideoData(screenVideo),
           waitForVideoData(cameraVideo)
         ]);
-        
+
         drawFrame();
       } catch (err) {
         drawFrame();
@@ -424,32 +433,105 @@ export default function useBroadcaster({ socket, device }) {
   }, []);
 
   const stopScreenShare = useCallback(async () => {
-    if (!isScreenSharing) return;
+    if (!isScreenSharingRef.current) return;
 
-    // Stop compositing
+    // Lock immediately — track.stop() fires onended synchronously, which would
+    // call stopScreenShare again via the onended handler before this call finishes.
+    isScreenSharingRef.current = false;
+
     stopCompositing();
 
-    // The camera stream should still be alive since we reused it
-    const cameraTrack = cameraStreamRef.current?.getVideoTracks()[0];
+    // Stop and clear screen tracks before anything else.
+    const screenStream = screenStreamRef.current;
+    screenStreamRef.current = null;
+    screenStream?.getTracks().forEach((t) => t.stop());
 
-    // Replace track in Mediasoup back to camera
-    if (cameraTrack && cameraTrack.readyState === 'live') {
-      try {
-        await videoProducerRef.current?.replaceTrack({ track: cameraTrack });
-      } catch (err) {
-        console.error('Error replacing track in producer:', err);
+    // After being replaced in the WebRTC sender, the original camera track is often
+    // suspended by the browser (reports live but produces no frames). Re-acquire the
+    // camera from scratch to guarantee a live, frame-producing track.
+    const audioTrack = cameraStreamRef.current?.getAudioTracks()[0];
+    let newCameraStream = null;
+
+    try {
+      const freshVideo = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+      });
+
+      const freshVideoTrack = freshVideo.getVideoTracks()[0];
+
+      // Stop the old video track now that we have a replacement.
+      cameraStreamRef.current?.getVideoTracks().forEach((t) => t.stop());
+
+      newCameraStream = new MediaStream([
+        freshVideoTrack,
+        ...(audioTrack?.readyState === 'live' ? [audioTrack] : []),
+      ]);
+      cameraStreamRef.current = newCameraStream;
+
+      if (videoProducerRef.current && !videoProducerRef.current.closed) {
+        await videoProducerRef.current.replaceTrack({ track: freshVideoTrack });
       }
+    } catch (err) {
+      console.error('Failed to re-acquire camera after screen share:', err);
+      // Fallback: try to revive the existing track.
+      const fallbackTrack = cameraStreamRef.current?.getVideoTracks()[0];
+      if (fallbackTrack) fallbackTrack.enabled = true;
+      if (fallbackTrack?.readyState === 'live' && videoProducerRef.current && !videoProducerRef.current.closed) {
+        try {
+          await videoProducerRef.current.replaceTrack({ track: fallbackTrack });
+        } catch (e) {
+          console.error('Fallback replaceTrack failed:', e);
+        }
+      }
+      newCameraStream = cameraStreamRef.current;
     }
 
-    // Stop the screen sharing tracks
-    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-    screenStreamRef.current = null;
-    
-    // Update the UI
-    setLocalStream(cameraStreamRef.current);
+    setIsCameraOn(true);
+    setLocalStream(newCameraStream);
     setIsScreenSharing(false);
+    screenShareModeRef.current = 'screen-only';
     setScreenShareMode('screen-only');
-  }, [isScreenSharing, stopCompositing]);
+  }, [stopCompositing]);
+
+  // Keep the ref always pointing to the latest stopScreenShare so the onended
+  // handler (set once when screen track is acquired) never calls a stale version.
+  useEffect(() => {
+    stopScreenShareFnRef.current = stopScreenShare;
+  }, [stopScreenShare]);
+
+  // Bug fix: when broadcaster minimizes or switches tabs, requestAnimationFrame
+  // is throttled by the browser and the canvas stops updating, causing a black/
+  // frozen frame for viewers. Solution: when the page becomes hidden, temporarily
+  // replace the mediasoup track with the raw screen track (which the OS captures
+  // regardless of browser focus). Restore the composite track when visible again.
+  useEffect(() => {
+    if (!isScreenSharing || screenShareMode !== 'screen-with-camera') return;
+
+    const handleVisibilityChange = async () => {
+      if (!videoProducerRef.current || videoProducerRef.current.closed) return;
+
+      if (document.hidden) {
+        // Switch to raw screen track — works even when tab is in background
+        const screenTrack = screenStreamRef.current?.getVideoTracks()[0];
+        if (screenTrack?.readyState === 'live') {
+          try {
+            await videoProducerRef.current.replaceTrack({ track: screenTrack });
+          } catch (e) {}
+        }
+      } else {
+        // Tab is visible again — restore composite (canvas) track
+        const compositeTrack = compositeStreamRef.current?.getVideoTracks()[0];
+        if (compositeTrack?.readyState === 'live') {
+          try {
+            await videoProducerRef.current.replaceTrack({ track: compositeTrack });
+          } catch (e) {}
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isScreenSharing, screenShareMode]);
 
   // Start screen share with mode selection
   const startScreenShare = useCallback(async (mode = 'screen-only') => {
@@ -469,29 +551,32 @@ export default function useBroadcaster({ socket, device }) {
       if (!screenTrack) return;
 
       screenStreamRef.current = screenStream;
-      setScreenShareMode(mode);
 
+      // Use the ref so this handler always calls the latest stopScreenShare,
+      // avoiding the stale-closure bug where isScreenSharing was still false
+      // at the time startScreenShare ran.
       screenTrack.onended = () => {
-        stopScreenShare();
+        stopScreenShareFnRef.current?.();
       };
 
       let trackToUse = screenTrack;
+      let actualMode = mode;
 
       if (mode === 'screen-with-camera') {
         // Try to use existing camera stream, or get a fresh one
         let cameraStream = cameraStreamRef.current;
         let cameraTrack = cameraStream?.getVideoTracks()[0];
-        
+
+        // Check if camera track exists and is usable (live, even if disabled)
         if (!cameraTrack || cameraTrack.readyState !== 'live') {
           // Try to get a fresh camera stream
-          console.log('Camera track not live for screen+camera, getting fresh camera...');
           try {
             const freshCameraStream = await navigator.mediaDevices.getUserMedia({
               video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }
             });
             cameraStream = freshCameraStream;
             cameraTrack = freshCameraStream.getVideoTracks()[0];
-            
+
             // Update ref with fresh camera (keep original audio)
             const originalAudioTrack = cameraStreamRef.current?.getAudioTracks()[0];
             if (originalAudioTrack && originalAudioTrack.readyState === 'live') {
@@ -500,46 +585,61 @@ export default function useBroadcaster({ socket, device }) {
               cameraStreamRef.current = freshCameraStream;
             }
           } catch (err) {
-            console.warn('Could not get fresh camera, falling back to screen-only:', err);
-            setScreenShareMode('screen-only');
+            actualMode = 'screen-only';
           }
         }
-        
+
+        // Re-enable camera track if it was disabled and use compositing
+        cameraTrack = cameraStreamRef.current?.getVideoTracks()[0];
         if (cameraTrack && cameraTrack.readyState === 'live') {
+          cameraTrack.enabled = true;
+          setIsCameraOn(true);
           // Start canvas compositing with camera stream
-          trackToUse = startCompositing(screenStream, cameraStream);
+          trackToUse = startCompositing(screenStream, cameraStreamRef.current);
         } else {
-          setScreenShareMode('screen-only');
+          actualMode = 'screen-only';
         }
       }
 
-      await videoProducerRef.current?.replaceTrack({ track: trackToUse });
+      screenShareModeRef.current = actualMode;
+      setScreenShareMode(actualMode);
 
+      // Ensure the track is valid before replacing
+      if (!trackToUse || trackToUse.readyState !== 'live') {
+        throw new Error('Screen track is not available');
+      }
+
+      // Replace track in producer - ensure we have a valid producer
+      if (videoProducerRef.current && !videoProducerRef.current.closed) {
+        await videoProducerRef.current.replaceTrack({ track: trackToUse });
+      }
+
+      // Clone the track for preview to avoid conflicts
+      const previewTrack = trackToUse.clone();
       const audioTrack = cameraStreamRef.current?.getAudioTracks()[0];
-      const previewStream = new MediaStream([trackToUse, ...(audioTrack ? [audioTrack] : [])]);
+      const previewStream = new MediaStream([previewTrack, ...(audioTrack ? [audioTrack] : [])]);
       setLocalStream(previewStream);
+      isScreenSharingRef.current = true;
       setIsScreenSharing(true);
     } catch (err) {
-      console.error('Error starting screen share:', err);
       if (err.name !== 'NotAllowedError') {
         alert('Failed to start screen share: ' + err.message);
       }
+      // Cleanup on failure
+      screenStreamRef.current?.getTracks().forEach(t => t.stop());
+      screenStreamRef.current = null;
     }
-  }, [isBroadcasting, stopScreenShare, startCompositing]);
+  }, [isBroadcasting, startCompositing]);
 
   // Toggle camera visibility in PiP mode
   const togglePipCamera = useCallback(async () => {
-    console.log('togglePipCamera called, isScreenSharing:', isScreenSharing, 'screenShareMode:', screenShareMode);
-    console.log('screenStreamRef.current:', screenStreamRef.current);
-    console.log('screenStreamRef tracks:', screenStreamRef.current?.getVideoTracks());
-    
     if (!isScreenSharing) return;
 
     if (screenShareMode === 'screen-only') {
       // Switch to screen-with-camera
       const screenStream = screenStreamRef.current;
       const screenTrack = screenStream?.getVideoTracks()[0];
-      
+
       if (!screenStream || !screenTrack || screenTrack.readyState !== 'live') {
         alert('Screen stream is no longer available');
         return;
@@ -547,18 +647,17 @@ export default function useBroadcaster({ socket, device }) {
 
       let cameraStream = cameraStreamRef.current;
       let cameraTrack = cameraStream?.getVideoTracks()[0];
-      
+
       // If camera track is not available or ended, try to get a fresh one
       if (!cameraTrack || cameraTrack.readyState !== 'live') {
-        console.log('Camera track not live, getting fresh camera stream...');
         try {
           const freshCameraStream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }
           });
           cameraStream = freshCameraStream;
           cameraTrack = freshCameraStream.getVideoTracks()[0];
-          
-          
+
+          // Update the camera stream ref with the fresh stream (keep original audio if available)
           const originalAudioTrack = cameraStreamRef.current?.getAudioTracks()[0];
           if (originalAudioTrack && originalAudioTrack.readyState === 'live') {
             cameraStreamRef.current = new MediaStream([cameraTrack, originalAudioTrack]);
@@ -566,64 +665,65 @@ export default function useBroadcaster({ socket, device }) {
             cameraStreamRef.current = freshCameraStream;
           }
         } catch (err) {
-          console.error('Failed to get fresh camera stream:', err);
           alert('Could not access camera. Please check permissions.');
           return;
         }
       }
-      
+
+      // Re-enable camera track if it was disabled
+      const finalCameraTrack = cameraStreamRef.current?.getVideoTracks()[0];
+      if (finalCameraTrack) {
+        finalCameraTrack.enabled = true;
+        setIsCameraOn(true);
+      }
+
       // Verify screen is still available before compositing
       const currentScreenTrack = screenStreamRef.current?.getVideoTracks()[0];
-      console.log('Screen track state before compositing:', currentScreenTrack?.readyState);
-      
       if (currentScreenTrack?.readyState !== 'live') {
         alert('Screen share ended. Please share your screen again.');
+        isScreenSharingRef.current = false;
         setIsScreenSharing(false);
+        screenShareModeRef.current = 'screen-only';
         setScreenShareMode('screen-only');
         return;
       }
-      
-      // Use the cameraStreamRef which has the updated stream
+
       const cameraStreamToUse = cameraStreamRef.current;
-      console.log('Camera stream to use:', cameraStreamToUse);
-      console.log('Camera track state:', cameraStreamToUse?.getVideoTracks()[0]?.readyState);
-      
       const compositeTrack = startCompositing(screenStreamRef.current, cameraStreamToUse);
-      
+
       if (!compositeTrack) {
-        console.error('Failed to create composite track');
         return;
       }
-      
+
       try {
         await videoProducerRef.current?.replaceTrack({ track: compositeTrack });
       } catch (err) {
-        console.error('Failed to replace track with composite:', err);
         return;
       }
-      
+
       const audioTrack = cameraStreamRef.current?.getAudioTracks()[0];
       const previewStream = new MediaStream([compositeTrack, ...(audioTrack ? [audioTrack] : [])]);
       setLocalStream(previewStream);
+      screenShareModeRef.current = 'screen-with-camera';
       setScreenShareMode('screen-with-camera');
     } else {
       // Switch back to screen-only
       stopCompositing();
-      
+
       const screenTrack = screenStreamRef.current?.getVideoTracks()[0];
-      console.log('Switching to screen-only, screen track state:', screenTrack?.readyState);
-      
       if (screenTrack && screenTrack.readyState === 'live') {
         await videoProducerRef.current?.replaceTrack({ track: screenTrack });
-        
+
         const audioTrack = cameraStreamRef.current?.getAudioTracks()[0];
         const previewStream = new MediaStream([screenTrack, ...(audioTrack ? [audioTrack] : [])]);
         setLocalStream(previewStream);
+        screenShareModeRef.current = 'screen-only';
         setScreenShareMode('screen-only');
       } else {
-        console.error('Screen track not available when switching to screen-only, state:', screenTrack?.readyState);
         // Screen share ended, need to stop screen sharing
+        isScreenSharingRef.current = false;
         setIsScreenSharing(false);
+        screenShareModeRef.current = 'screen-only';
         setScreenShareMode('screen-only');
         setLocalStream(cameraStreamRef.current);
       }
