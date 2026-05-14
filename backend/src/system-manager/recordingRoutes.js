@@ -15,6 +15,7 @@
 import { Router } from 'express';
 import prisma from '../services/prisma.js';
 import { verifyToken, verifyRole } from '../middleware/auth.js';
+import { verifyClassroomAccess } from '../middleware/verifyClassroomAccess.js';
 import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('recording:routes');
@@ -179,39 +180,32 @@ router.post('/:id/stop', verifyToken, verifyRole('TEACHER'), async (req, res) =>
  * List all recordings in a classroom (teacher + enrolled students)
  * Query: { status, sort, limit }
  */
-router.get('/classrooms/:classroomId', verifyToken, async (req, res) => {
+router.get(
+  '/classrooms/:classroomId',
+  verifyToken,
+  verifyClassroomAccess((req) => req.params.classroomId),
+  async (req, res) => {
   log.debug(`📋 GET /api/classrooms/${req.params.classroomId}/recordings`);
   try {
     const { classroomId } = req.params;
     const { status, sort = 'recent', limit = 50 } = req.query;
+    const { isTeacher } = req.userAccess;
 
-    // Verify access (teacher or enrolled student)
-    const classroom = await prisma.classroom.findUnique({
-      where: { id: classroomId },
-    });
-
-    if (!classroom) {
-      return res.status(404).json({ error: 'Classroom not found' });
-    }
-
-    const isTeacher = classroom.teacherId === req.user.id;
-    const isStudent = await prisma.enrollment.findUnique({
-      where: {
-        classroomId_studentId: {
-          classroomId,
-          studentId: req.user.id,
-        },
-      },
-    });
-
-    if (!isTeacher && !isStudent) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    // Build query
+    // Build query — push the student access filter into the SQL `where` so
+    // we don't load PRIVATE recordings only to discard them in JS. Also lets
+    // the new (classroomId, status) composite index actually do work.
     const where = {
       classroomId,
       ...(status && { status }),
+      ...(isTeacher
+        ? {}
+        : {
+            OR: [
+              { accessType: 'CLASSROOM' },
+              { accessType: 'PUBLIC' },
+              { accessType: 'PRIVATE', permissions: { some: { userId: req.user.id } } },
+            ],
+          }),
     };
 
     const orderBy = {
@@ -221,32 +215,27 @@ router.get('/classrooms/:classroomId', verifyToken, async (req, res) => {
     }[sort] ||
       { recordingStarted: 'desc' };
 
+    // Clamp pagination — without this, parseInt('-1') returns -1 (negative
+    // take is rejected by Prisma) and parseInt('99999') would let a single
+    // request fan out arbitrarily large reads.
+    const parsedLimit = Math.max(1, Math.min(100, parseInt(limit, 10) || 50));
+
     const recordings = await prisma.recording.findMany({
       where,
       orderBy,
-      take: parseInt(limit),
+      take: parsedLimit,
       include: {
         teacher: { select: { id: true, name: true, email: true } },
-        permissions: req.user.role === 'TEACHER' ? true : false,
+        permissions: isTeacher,
       },
     });
 
-    // For students, filter out private recordings they don't have access to
-    const filtered = isStudent
-      ? recordings.filter((r) => {
-          if (r.accessType === 'PRIVATE') {
-            return r.permissions?.some((p) => p.userId === req.user.id);
-          }
-          return true; // CLASSROOM or PUBLIC access
-        })
-      : recordings;
-
-    log.info(`Retrieved ${filtered.length} recordings from ${classroomId}`);
+    log.info(`Retrieved ${recordings.length} recordings from ${classroomId}`);
 
     res.json({
       classroomId,
-      total: filtered.length,
-      recordings: filtered.map((r) => ({
+      total: recordings.length,
+      recordings: recordings.map((r) => ({
         id: r.id,
         title: r.title,
         description: r.description,

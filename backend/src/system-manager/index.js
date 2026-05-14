@@ -26,6 +26,7 @@ import broadcastRoutes from './broadcastRoutes.js';
 import recordingRoutes from './recordingRoutes.js';
 import { registerSocketHandlers } from './socketHandlers.js';
 import S3RecordingService from '../services/s3Service.js';
+import { startRecordingJanitor } from './recordingJanitor.js';
 
 const log = createLogger('system-manager');
 
@@ -137,6 +138,9 @@ async function start() {
     // Register Socket.IO handlers (pass redisClient for pub/sub)
     const socketManager = registerSocketHandlers(io, redisClient);
 
+    // Start janitor that reaps recordings stuck in PROCESSING.
+    const janitor = startRecordingJanitor();
+
     // Listen
     httpServer.listen(managerConfig.port, () => {
       log.info(`🚀 System-Manager running on port ${managerConfig.port}`);
@@ -149,7 +153,8 @@ async function start() {
       log.info('SIGTERM received, shutting down...');
       httpServer.close(async () => {
         try {
-          await s3Service.cleanup();
+          janitor.stop();
+          await s3Service?.cleanup();
           await redisClient.disconnect();
           await prisma.$disconnect();
           log.info('Shutdown complete');

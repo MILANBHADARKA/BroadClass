@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function RecordingPanel({ socket, classroomId, broadcastId, isLive }) {
@@ -47,12 +47,20 @@ export default function RecordingPanel({ socket, classroomId, broadcastId, isLiv
     // },
   ];
 
+  // Mirror duration into a ref so the progress handler can read the current value
+  // without forcing the listener-effect to re-run (and re-attach) every second.
+  const durationRef = useRef(0);
+
   // Timer for recording duration
   useEffect(() => {
     if (!isRecording) return;
 
     const interval = setInterval(() => {
-      setDuration((prev) => prev + 1);
+      setDuration((prev) => {
+        const next = prev + 1;
+        durationRef.current = next;
+        return next;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
@@ -67,7 +75,7 @@ export default function RecordingPanel({ socket, classroomId, broadcastId, isLiv
         const mb = (data.uploadedBytes / (1024 * 1024)).toFixed(1);
         setUploadedMB(mb);
         // Estimate progress (rough calculation based on time)
-        const estimatedProgress = Math.min(95, (duration * 15) % 95);
+        const estimatedProgress = Math.min(95, (durationRef.current * 15) % 95);
         setUploadProgress(estimatedProgress);
       }
     };
@@ -82,6 +90,10 @@ export default function RecordingPanel({ socket, classroomId, broadcastId, isLiv
           setUploadProgress(100);
           setSuccess(`Recording completed! (${data.duration}s)`);
           setTimeout(() => setSuccess(null), 5000);
+        } else if (data.status === 'recording_failed') {
+          setIsRecording(false);
+          setUploadProgress(0);
+          setError(`Recording failed${data.reason ? `: ${data.reason}` : ''}`);
         }
       }
     };
@@ -93,7 +105,7 @@ export default function RecordingPanel({ socket, classroomId, broadcastId, isLiv
       socket.off('recording:progress', handleProgress);
       socket.off('recording:status', handleStatus);
     };
-  }, [socket, recordingId, duration]);
+  }, [socket, recordingId]);
 
   const formatTime = (seconds) => {
     const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
@@ -140,6 +152,7 @@ export default function RecordingPanel({ socket, classroomId, broadcastId, isLiv
       setRecordingId(data.recordingId);
       setIsRecording(true);
       setDuration(0);
+      durationRef.current = 0;
       setUploadProgress(0);
       setUploadedMB(0);
 

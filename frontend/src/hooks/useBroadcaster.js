@@ -28,21 +28,53 @@ export default function useBroadcaster({ socket, device }) {
   const cameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
   const isCompositingActiveRef = useRef(false);
+  // Web Worker that ticks the canvas draw loop at ~30fps. Workers are not
+  // throttled by document visibility, so this keeps drawing (and therefore
+  // canvas.captureStream() producing fresh frames) even when the broadcaster
+  // has the browser minimized — without this, viewers see a frozen image
+  // because requestAnimationFrame is clamped to ~1Hz on hidden tabs.
+  const tickerWorkerRef = useRef(null);
 
   // Refs that mirror state to avoid stale closures in event handlers
   const isScreenSharingRef = useRef(false);
   const screenShareModeRef = useRef('screen-only');
   // Always points to the latest stopScreenShare — used by the onended handler
   const stopScreenShareFnRef = useRef(null);
+  // Tracks whether the hook is still mounted so async handlers can bail out
+  // before touching torn-down WebRTC resources.
+  const isMountedRef = useRef(true);
+  // Sync mirror of `localStream` state, kept up-to-date by the effect below.
+  // We need this so stopBroadcast can stop the cloned tracks held by the
+  // preview stream — clones are independent of their source, so stopping
+  // cameraStreamRef/screenStreamRef does NOT stop them and the camera light
+  // would stay on after End Broadcast.
+  const localStreamRef = useRef(null);
+  // Lazy lookup of stopCompositing — stopBroadcast (defined earlier in the
+  // file) needs to call it, but stopCompositing is declared later. A ref
+  // bound via effect avoids the temporal-dead-zone problem of referencing
+  // it directly in stopBroadcast's useCallback deps.
+  const stopCompositingRef = useRef(null);
 
-  // Cleanup animation frame on unmount
+  // Cleanup animation frame, ticker worker, and mount flag on unmount
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      if (tickerWorkerRef.current) {
+        tickerWorkerRef.current.terminate();
+        tickerWorkerRef.current = null;
+      }
     };
   }, []);
+
+  // Keep localStreamRef in sync with the localStream state so stopBroadcast
+  // (a useCallback that can't take state as a dep without re-creating itself
+  // on every preview change) can stop the latest preview's tracks.
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
 
   const startBroadcast = useCallback(async (roomId) => {
     if (!roomId.trim()) {
@@ -121,15 +153,34 @@ export default function useBroadcaster({ socket, device }) {
   }, [socket, device]);
 
   const stopBroadcast = useCallback((roomId) => {
-    // Stop animation frame
+    // Tear down canvas compositing first — this stops the *cloned* screen and
+    // camera tracks held by the hidden compositing video elements (set up in
+    // startCompositing), terminates the ticker worker, and removes those
+    // video elements from the DOM. Skipping this leaves those cloned tracks
+    // alive and the camera/screen-capture indicators stay on after End
+    // Broadcast. Called via ref because stopCompositing is declared later
+    // in this file.
+    stopCompositingRef.current?.();
+
+    // Stop animation frame (defensive — stopCompositing already nulls it).
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
 
-    cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
-    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-    compositeStreamRef.current?.getTracks().forEach((t) => t.stop());
+    // Stop every track we've ever handed out. Many of these reference the
+    // same underlying track (e.g. cameraStreamRef and localStream often share
+    // the mic), and the preview stream contains *clones* that need their own
+    // stop() call. track.stop() is idempotent, so stopping the same track
+    // twice is harmless.
+    const stopAll = (stream) => {
+      stream?.getTracks().forEach((t) => { try { t.stop(); } catch (_) {} });
+    };
+    stopAll(cameraStreamRef.current);
+    stopAll(screenStreamRef.current);
+    stopAll(compositeStreamRef.current);
+    stopAll(localStreamRef.current);
+
     transportRef.current?.close();
 
     transportRef.current = null;
@@ -138,6 +189,7 @@ export default function useBroadcaster({ socket, device }) {
     cameraStreamRef.current = null;
     screenStreamRef.current = null;
     compositeStreamRef.current = null;
+    localStreamRef.current = null;
     canvasRef.current = null;
     canvasCtxRef.current = null;
 
@@ -172,6 +224,10 @@ export default function useBroadcaster({ socket, device }) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
+    if (tickerWorkerRef.current) {
+      tickerWorkerRef.current.terminate();
+      tickerWorkerRef.current = null;
+    }
     if (cameraVideoRef.current) {
       // Stop the cloned PiP camera track if it exists
       if (cameraVideoRef.current._pipTrack) {
@@ -203,12 +259,23 @@ export default function useBroadcaster({ socket, device }) {
     compositeStreamRef.current = null;
   }, []);
 
+  // Wire stopCompositing into the ref so stopBroadcast (declared above) can
+  // reach it. Runs once on mount because stopCompositing has [] deps and is
+  // therefore stable across renders.
+  useEffect(() => {
+    stopCompositingRef.current = stopCompositing;
+  }, [stopCompositing]);
+
   // Canvas compositing for PiP mode
   const startCompositing = useCallback((screenStream, cameraStream) => {
     // Stop any existing compositing first
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
+    }
+    if (tickerWorkerRef.current) {
+      tickerWorkerRef.current.terminate();
+      tickerWorkerRef.current = null;
     }
 
     // Mark compositing as active
@@ -380,7 +447,10 @@ export default function useBroadcaster({ socket, device }) {
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      animationFrameRef.current = requestAnimationFrame(drawFrame);
+      // NOTE: no requestAnimationFrame self-reschedule here. The draw loop is
+      // driven by the Web Worker installed below, which keeps ticking even
+      // when the broadcaster minimizes the browser (rAF is throttled, workers
+      // are not).
     };
 
     // Wait for video to have actual data before starting draw loop
@@ -428,6 +498,23 @@ export default function useBroadcaster({ socket, device }) {
     // Create stream from canvas
     const compositeStream = canvas.captureStream(30);
     compositeStreamRef.current = compositeStream;
+
+    // Drive the draw loop from a Web Worker timer (~30fps). Workers run on
+    // their own thread and are NOT throttled when document.hidden, so the
+    // canvas continues being drawn — and canvas.captureStream therefore
+    // continues producing fresh frames — even with the browser minimized.
+    // The inline script is small enough to keep here rather than ship a
+    // separate worker file.
+    const workerSource = 'let id=setInterval(()=>postMessage(0),33);self.onmessage=function(e){if(e.data==="stop"){clearInterval(id);self.close();}};';
+    const workerBlob = new Blob([workerSource], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(workerBlob);
+    const tickerWorker = new Worker(workerUrl);
+    tickerWorker.onmessage = () => {
+      if (isCompositingActiveRef.current) drawFrame();
+    };
+    tickerWorkerRef.current = tickerWorker;
+    // Revoke the blob URL — the worker has already loaded its script.
+    URL.revokeObjectURL(workerUrl);
 
     return compositeStream.getVideoTracks()[0];
   }, []);
@@ -499,39 +586,13 @@ export default function useBroadcaster({ socket, device }) {
     stopScreenShareFnRef.current = stopScreenShare;
   }, [stopScreenShare]);
 
-  // Bug fix: when broadcaster minimizes or switches tabs, requestAnimationFrame
-  // is throttled by the browser and the canvas stops updating, causing a black/
-  // frozen frame for viewers. Solution: when the page becomes hidden, temporarily
-  // replace the mediasoup track with the raw screen track (which the OS captures
-  // regardless of browser focus). Restore the composite track when visible again.
-  useEffect(() => {
-    if (!isScreenSharing || screenShareMode !== 'screen-with-camera') return;
-
-    const handleVisibilityChange = async () => {
-      if (!videoProducerRef.current || videoProducerRef.current.closed) return;
-
-      if (document.hidden) {
-        // Switch to raw screen track — works even when tab is in background
-        const screenTrack = screenStreamRef.current?.getVideoTracks()[0];
-        if (screenTrack?.readyState === 'live') {
-          try {
-            await videoProducerRef.current.replaceTrack({ track: screenTrack });
-          } catch (e) {}
-        }
-      } else {
-        // Tab is visible again — restore composite (canvas) track
-        const compositeTrack = compositeStreamRef.current?.getVideoTracks()[0];
-        if (compositeTrack?.readyState === 'live') {
-          try {
-            await videoProducerRef.current.replaceTrack({ track: compositeTrack });
-          } catch (e) {}
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isScreenSharing, screenShareMode]);
+  // (Previously: a visibilitychange/blur handler swapped the producer's track
+  // to the raw getDisplayMedia track while the broadcaster was backgrounded.
+  // That workaround relied on replaceTrack succeeding through the simulcast
+  // sender, which silently fails in some browser/codec combinations. The
+  // Web Worker timer installed inside startCompositing now keeps the canvas
+  // drawing at 30fps regardless of tab visibility, so the symptom doesn't
+  // arise in the first place and no track swap is needed.)
 
   // Start screen share with mode selection
   const startScreenShare = useCallback(async (mode = 'screen-only') => {

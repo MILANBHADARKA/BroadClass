@@ -15,6 +15,7 @@ import os from 'os';
 import { S3RecordingService } from '../services/s3Service.js';
 import prisma from '../services/prisma.js';
 import { createLogger } from '../utils/logger.js';
+import { S3_MULTIPART_CHUNK_SIZE } from '../config/constants.js';
 
 const log = createLogger('origin:recording');
 
@@ -283,13 +284,20 @@ export class OriginRecordingHandler {
       // Handle FFmpeg output - stream to S3
       let partNumber = 1;
       let chunkBuffer = Buffer.alloc(0);
-      const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB (AWS minimum)
+      const CHUNK_SIZE = S3_MULTIPART_CHUNK_SIZE;
       let totalUploadedBytes = 0;
 
       // Reference to `this` for use in callbacks
       const self = this;
 
       ffmpeg.stdout.on('data', async (data) => {
+        // Stop processing buffered data once the recording has been marked failed.
+        // FFmpeg may flush a few more chunks before SIGTERM takes effect.
+        // (recState may briefly be undefined during startup before activeRecordings.set —
+        // in that window we simply haven't been marked failed yet.)
+        const recState = self.activeRecordings.get(recordingId);
+        if (recState?.failed) return;
+
         chunkBuffer = Buffer.concat([chunkBuffer, data]);
 
         while (chunkBuffer.length >= CHUNK_SIZE) {
@@ -305,6 +313,7 @@ export class OriginRecordingHandler {
             // Emit progress event
             const progressEvent = {
               recordingId,
+              roomId,
               uploadedBytes: totalUploadedBytes,
               timestamp: Date.now(),
             };
@@ -322,15 +331,19 @@ export class OriginRecordingHandler {
             }
           } catch (err) {
             log.error(`Failed to upload chunk ${partNumber}:`, err.message);
+            // Subsequent parts would be numbered as if this one succeeded, producing
+            // a corrupt object. Tear down the recording instead of silently continuing.
+            await self._markRecordingFailed(recordingId, `chunk upload failed: ${err.message}`);
+            return;
           }
         }
 
-        // Update recording state with latest values
-        const rec = self.activeRecordings.get(recordingId);
-        if (rec) {
-          rec.partNumber = partNumber;
-          rec.chunkBuffer = chunkBuffer;
-          rec.totalUploadedBytes = totalUploadedBytes;
+        // Update recording state with latest values (recState may be undefined
+        // during the brief startup window before activeRecordings.set runs).
+        if (recState && !recState.failed) {
+          recState.partNumber = partNumber;
+          recState.chunkBuffer = chunkBuffer;
+          recState.totalUploadedBytes = totalUploadedBytes;
         }
       });
 
@@ -573,6 +586,65 @@ export class OriginRecordingHandler {
 
       throw err;
     }
+  }
+
+  /**
+   * Tear down a recording that has hit an unrecoverable error mid-stream
+   * (e.g. an S3 chunk upload failure). Idempotent: safe to call concurrently
+   * with stopRecording or itself.
+   */
+  async _markRecordingFailed(recordingId, reason) {
+    const recording = this.activeRecordings.get(recordingId);
+    if (!recording || recording.failed) return;
+    recording.failed = true;
+
+    log.error(`Recording ${recordingId} failed: ${reason}`);
+
+    const { ffmpeg, videoTransport, audioTransport, videoConsumer, audioConsumer, sdpPath, roomId } = recording;
+
+    // Notify clients first so the UI can react before cleanup latency.
+    const failureEvent = {
+      recordingId,
+      roomId,
+      status: 'recording_failed',
+      reason,
+      timestamp: Date.now(),
+    };
+    try { await this.redisClient.client.publish('recording:status', JSON.stringify(failureEvent)); }
+    catch (err) { log.warn('Failed to publish recording failure to Redis:', err.message); }
+    if (this.io) this.io.emit('recording:status', failureEvent);
+
+    // Stop FFmpeg — SIGTERM, escalating to SIGKILL if it lingers.
+    if (ffmpeg && !ffmpeg.killed) {
+      try { ffmpeg.kill('SIGTERM'); } catch (_) {}
+      setTimeout(() => { try { if (!ffmpeg.killed) ffmpeg.kill('SIGKILL'); } catch (_) {} }, 1000);
+    }
+
+    // Abort the multipart upload so S3 doesn't accumulate orphan parts (billed).
+    await this.s3Service.abortUpload(recordingId).catch((err) =>
+      log.warn(`Failed to abort S3 upload for ${recordingId}:`, err.message));
+
+    // Close mediasoup resources.
+    try { videoConsumer?.close(); } catch (_) {}
+    try { audioConsumer?.close(); } catch (_) {}
+    try { videoTransport?.close(); } catch (_) {}
+    try { audioTransport?.close(); } catch (_) {}
+
+    // Remove SDP file.
+    try { if (sdpPath && fs.existsSync(sdpPath)) fs.unlinkSync(sdpPath); }
+    catch (err) { log.warn('Failed to delete SDP file:', err.message); }
+
+    // Persist FAILED status.
+    try {
+      await prisma.recording.update({
+        where: { id: recordingId },
+        data: { status: 'FAILED' },
+      });
+    } catch (dbErr) {
+      log.error(`Failed to mark recording ${recordingId} as FAILED in DB:`, dbErr);
+    }
+
+    this.activeRecordings.delete(recordingId);
   }
 
   /**

@@ -30,13 +30,18 @@ export async function connectEdgeServers(roomId, broadcasts, redisClient, contai
   log.info(`Piping broadcast ${roomId} to ${edges.length} edge server(s)...`);
   log.info(`  Producers: ${Array.from(broadcast.producers.keys()).join(', ')}`);
 
-  for (const edge of edges) {
-    try {
-      await pipeToEdgeWithRetry(roomId, edge, broadcasts, containerIp);
-    } catch (err) {
-      log.error(`Skipping ${edge.serverId} after all retries failed: ${err.message}`);
-    }
-  }
+  // Pipe to all edges concurrently. The previous sequential loop meant a
+  // single slow/unreachable edge stalled every other edge behind it — the
+  // built-in retry alone takes up to 3.5s, so N edges took up to N × 3.5s.
+  await Promise.allSettled(
+    edges.map(async (edge) => {
+      try {
+        await pipeToEdgeWithRetry(roomId, edge, broadcasts, containerIp);
+      } catch (err) {
+        log.error(`Skipping ${edge.serverId} after all retries failed: ${err.message}`);
+      }
+    }),
+  );
 
   log.info(`Piping complete for ${roomId}. Edges: ${broadcast.edgeServers.join(', ') || 'none'}`);
 }

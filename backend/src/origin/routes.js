@@ -71,7 +71,9 @@ export function registerOriginRoutes({ app, config, redisClient, state }) {
 
       log.info(`Load balancer query for room: ${roomId}`);
 
-      // Verify enrollment for students
+      // Verify enrollment for students. Fail closed on DB errors — otherwise a
+      // transient outage would let any authenticated student pull edge URLs
+      // for any classroom they're not enrolled in.
       if (req.user.role === 'STUDENT') {
         try {
           const enrollment = await prisma.enrollment.findUnique({
@@ -86,7 +88,8 @@ export function registerOriginRoutes({ app, config, redisClient, state }) {
             return res.status(403).json({ error: 'Not enrolled in this classroom' });
           }
         } catch (dbErr) {
-          log.warn('DB enrollment check failed:', dbErr.message);
+          log.error('DB enrollment check failed:', dbErr.message);
+          return res.status(503).json({ error: 'Enrollment check temporarily unavailable, please retry' });
         }
       }
 

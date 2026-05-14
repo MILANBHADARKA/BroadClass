@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
+import { createLogger } from '../utils/logger.js';
 
 dotenv.config();
+
+const log = createLogger('config');
 
 export const managerConfig = {
   // Server
@@ -40,7 +43,7 @@ function validateConfig() {
   const missing = required.filter(key => !process.env[key]);
   
   if (missing.length > 0) {
-    console.warn(`⚠️  Missing env vars (may fail at runtime): ${missing.join(', ')}`);
+    log.warn(`Missing env vars (may fail at runtime): ${missing.join(', ')}`);
   }
 }
 

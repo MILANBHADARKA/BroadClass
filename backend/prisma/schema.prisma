@@ -122,6 +122,11 @@ model Recording {
   @@index([teacherId])
   @@index([status])
   @@index([recordingStarted])
+  // Composite indexes for the two hot list-query shapes:
+  //   - per-classroom recording lists, filtered by status (READY/PROCESSING/etc)
+  //   - teacher's own recordings ordered chronologically
+  @@index([classroomId, status])
+  @@index([teacherId, recordingStarted])
 }
 
 model RecordingPermission {

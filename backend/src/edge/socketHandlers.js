@@ -36,8 +36,15 @@ export function registerEdgeSocketHandlers({ io, config, edgeState, redisClient 
 
         const res = socketResources.get(socket.id);
         res.roomId = roomId;
-        res.viewerCounted = true;
-        await redisClient.updateBroadcastViewerCount(roomId, 1);
+
+        // Increment first, then mark counted. If the socket disconnects mid-await,
+        // viewerCounted stays false and the disconnect handler skips decrement.
+        try {
+          await redisClient.updateBroadcastViewerCount(roomId, 1);
+          res.viewerCounted = true;
+        } catch (err) {
+          log.warn(`Failed to increment viewer count for ${roomId}:`, err.message);
+        }
 
         log.info(`Student ${socket.id} joined room ${roomId}`);
         cb({ success: true });
@@ -176,9 +183,9 @@ export function registerEdgeSocketHandlers({ io, config, edgeState, redisClient 
       const res = socketResources.get(socket.id);
       if (res) {
         if (res.viewerCounted && res.roomId) {
-          redisClient.updateBroadcastViewerCount(res.roomId, -1)
-            .catch(() => {});
           res.viewerCounted = false;
+          redisClient.updateBroadcastViewerCount(res.roomId, -1)
+            .catch((err) => log.warn(`Failed to decrement viewer count for ${res.roomId} on disconnect:`, err.message));
         }
         res.consumers.forEach((c) => { try { c.close(); } catch (_) {} });
         try { res.consumerTransport?.close(); } catch (_) {}

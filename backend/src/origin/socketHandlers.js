@@ -195,7 +195,9 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
           // Fallback viewer on origin
           if (!broadcast) return cb({ error: 'Broadcast not found' });
 
-          // ── STUDENT ONLY: verify enrollment ──
+          // ── STUDENT ONLY: verify enrollment. Fail closed on DB errors —
+          // otherwise a transient outage would let any authenticated student
+          // join any classroom's broadcast.
           if (socket.user && socket.user.role === 'STUDENT') {
             try {
               const enrollment = await prisma.enrollment.findUnique({
@@ -210,7 +212,8 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
                 return cb({ error: 'You are not enrolled in this classroom' });
               }
             } catch (dbErr) {
-              log.warn('DB enrollment check failed, allowing view:', dbErr.message);
+              log.error('DB enrollment check failed:', dbErr.message);
+              return cb({ error: 'Enrollment check temporarily unavailable, please retry' });
             }
           }
 
@@ -346,9 +349,18 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
 
         const res = socketResources.get(socket.id);
         res.roomId = roomId;
-        res.viewerCounted = true;
 
-        await redisClient.updateBroadcastViewerCount(roomId, 1);
+        // Increment first, mark counted only after Redis acknowledges. If the
+        // socket disconnects mid-increment the disconnect handler will see
+        // viewerCounted=false and skip the decrement, avoiding a negative count.
+        try {
+          await redisClient.updateBroadcastViewerCount(roomId, 1);
+          res.viewerCounted = true;
+        } catch (err) {
+          log.warn(`Failed to increment viewer count for ${roomId}:`, err.message);
+          // Continue the join — viewer count tracking is best-effort. A janitor
+          // (or HINCRBY-based atomic update — see Phase 2.3) reconciles drift.
+        }
         log.info(`Fallback viewer ${socket.id} joined ${roomId} (${broadcast.viewers.size} viewers)`);
 
         // Publish viewer count change to System-Manager
@@ -444,15 +456,15 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
             // Publish viewer count change to System-Manager
             try {
               const stored = await redisClient.getBroadcast(roomId);
-              await redisClient.publish('broadcast:viewer-count', JSON.stringify({ 
-                roomId, 
+              await redisClient.publish('broadcast:viewer-count', JSON.stringify({
+                roomId,
                 viewerCount: stored?.viewerCount ?? 0
               }));
             } catch (err) {
               log.warn('Failed to publish viewer count to Redis:', err.message);
             }
           })
-          .catch(() => {});
+          .catch((err) => log.warn(`Failed to decrement viewer count for ${roomId} on leave:`, err.message));
       }
     });
 
@@ -495,15 +507,15 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
                 // Publish viewer count change to System-Manager
                 try {
                   const stored = await redisClient.getBroadcast(roomId);
-                  await redisClient.publish('broadcast:viewer-count', JSON.stringify({ 
-                    roomId, 
+                  await redisClient.publish('broadcast:viewer-count', JSON.stringify({
+                    roomId,
                     viewerCount: stored?.viewerCount ?? 0
                   }));
                 } catch (err) {
                   log.warn('Failed to publish viewer count to Redis:', err.message);
                 }
               })
-              .catch(() => {});
+              .catch((err) => log.warn(`Failed to decrement viewer count for ${roomId} on disconnect:`, err.message));
           }
         }
       });

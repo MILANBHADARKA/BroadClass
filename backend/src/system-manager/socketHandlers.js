@@ -29,45 +29,58 @@ export function registerSocketHandlers(io, redisClient) {
           try {
             const data = JSON.parse(message);
 
-            // broadcast:list-updated
+            // Target room-scoped events at clients who joined `room:${roomId}` via
+            // the `broadcast:join-room` handler below, instead of fanning out to
+            // every connected socket. With many active classrooms this would
+            // otherwise be O(clients × events).
+
+            // broadcast:list-updated — classroom-scoped (clients on the dashboard
+            // for that classroom). Falls back to global if classroomId is missing.
             if (channel === 'broadcast:list-updated') {
               log.info(`📡 Broadcast list updated: ${data.roomId} (${data.action})`);
-              io.emit('broadcast:list-updated', {
+              const payload = {
                 roomId: data.roomId,
                 classroomId: data.classroomId,
                 action: data.action,
                 timestamp: data.timestamp || Date.now(),
-              });
+              };
+              if (data.classroomId) {
+                io.to(`classroom:${data.classroomId}`).emit('broadcast:list-updated', payload);
+              } else {
+                io.emit('broadcast:list-updated', payload);
+              }
             }
 
-            // broadcast:viewer-count
-            if (channel === 'broadcast:viewer-count') {
+            // broadcast:viewer-count — only clients watching that broadcast
+            if (channel === 'broadcast:viewer-count' && data.roomId) {
               log.debug(`📊 Viewer count: ${data.roomId} = ${data.viewerCount}`);
-              io.emit('broadcast:viewer-count', {
+              io.to(`room:${data.roomId}`).emit('broadcast:viewer-count', {
                 roomId: data.roomId,
                 count: data.viewerCount,
                 timestamp: data.timestamp || Date.now(),
               });
             }
 
-            // recording:status
-            if (channel === 'recording:status') {
+            // recording:status — only clients watching that broadcast
+            if (channel === 'recording:status' && data.roomId) {
               log.info(`📹 Recording status: ${data.recordingId} → ${data.status}`);
-              io.emit('recording:status', {
+              io.to(`room:${data.roomId}`).emit('recording:status', {
                 recordingId: data.recordingId,
                 roomId: data.roomId,
                 status: data.status,
                 duration: data.duration,
                 fileSize: data.fileSize,
+                reason: data.reason,
                 timestamp: data.timestamp || Date.now(),
               });
             }
 
-            // recording:progress
-            if (channel === 'recording:progress') {
+            // recording:progress — only clients watching that broadcast
+            if (channel === 'recording:progress' && data.roomId) {
               log.debug(`📤 Recording progress: ${data.recordingId} → ${data.uploadedBytes} bytes`);
-              io.emit('recording:progress', {
+              io.to(`room:${data.roomId}`).emit('recording:progress', {
                 recordingId: data.recordingId,
+                roomId: data.roomId,
                 uploadedBytes: data.uploadedBytes,
                 timestamp: data.timestamp || Date.now(),
               });

@@ -103,6 +103,10 @@ export class RedisClient {
     });
 
     await this.client.setEx(key, 30, value);
+    // Track membership in a set so getAllEdges can avoid an O(N) KEYS scan.
+    // Stale members (edge crashed without removeEdge) are reaped lazily by
+    // getAllEdges when the underlying edge:<id> key has expired.
+    await this.client.sAdd('edges:active', serverId);
     log.info(`Edge registered: ${serverId} (ext=${ip}:${port}, int=${internalHost}:${internalPort})`);
     return key;
   }
@@ -127,21 +131,41 @@ export class RedisClient {
   }
 
   async getAllEdges() {
-    const keys = await this.client.keys('edge:*');
-    if (!keys?.length) return [];
+    const serverIds = await this.client.sMembers('edges:active');
+    if (!serverIds?.length) return [];
 
-    const edges = await Promise.all(
-      keys.map(async (key) => {
-        const data = await this.client.get(key);
-        return data ? JSON.parse(data) : null;
-      }),
-    );
-    return edges.filter((e) => e?.isAlive);
+    const keys = serverIds.map((id) => `edge:${id}`);
+    const values = await this.client.mGet(keys);
+
+    const stale = [];
+    const edges = [];
+    for (let i = 0; i < serverIds.length; i++) {
+      const data = values[i];
+      if (!data) {
+        // Underlying edge:<id> key expired — reap from the set lazily.
+        stale.push(serverIds[i]);
+        continue;
+      }
+      try {
+        const edge = JSON.parse(data);
+        if (edge?.isAlive) edges.push(edge);
+      } catch {
+        stale.push(serverIds[i]);
+      }
+    }
+
+    if (stale.length) {
+      // Best-effort cleanup; failures here just mean we'll retry next call.
+      this.client.sRem('edges:active', stale).catch(() => {});
+    }
+
+    return edges;
   }
 
   async removeEdge(serverId) {
     const key = `edge:${serverId}`;
     await this.client.del(key);
+    await this.client.sRem('edges:active', serverId).catch(() => {});
     log.info(`Edge removed: ${serverId}`);
   }
 
@@ -161,21 +185,35 @@ export class RedisClient {
     });
 
     await this.client.set(key, value);
+    // Track active broadcasts in a set for O(1) membership / O(M) listing,
+    // avoiding KEYS scans of the entire keyspace in getAllBroadcasts.
+    await this.client.sAdd('broadcasts:active', roomId);
+    // Reset viewer counter so a re-registered broadcast doesn't inherit stale data.
+    await this.client.set(this._viewerCounterKey(roomId), '0');
     log.info(`Broadcast registered: ${roomId}`);
     return key;
   }
 
+  // Viewer counter lives in its own key so concurrent increments/decrements
+  // across many origin/edge processes are atomic via INCRBY, instead of the
+  // previous read-modify-write on a JSON blob (which could lose updates under
+  // contention).
+  _viewerCounterKey(roomId) {
+    return `broadcast:${roomId}:viewers`;
+  }
+
   async updateBroadcastViewerCount(roomId, delta) {
-    const key = `broadcast:${roomId}`;
-    const data = await this.client.get(key);
-    if (!data) return null;
+    // Ensure the broadcast still exists — if not, don't create a stray counter.
+    const exists = await this.client.exists(`broadcast:${roomId}`);
+    if (!exists) return null;
 
-    const broadcast = JSON.parse(data);
-    const current = broadcast.viewerCount || 0;
-    const next = Math.max(0, current + delta);
-    broadcast.viewerCount = next;
-
-    await this.client.set(key, JSON.stringify(broadcast));
+    let next = await this.client.incrBy(this._viewerCounterKey(roomId), delta);
+    if (next < 0) {
+      // Defensive: viewer counts must be non-negative. Most likely we logged
+      // a decrement for a join that never completed (Redis blip during the +1).
+      await this.client.set(this._viewerCounterKey(roomId), '0');
+      next = 0;
+    }
     await this.client.publish('broadcast:viewerCount', JSON.stringify({ roomId, viewerCount: next }));
     return next;
   }
@@ -192,7 +230,12 @@ export class RedisClient {
 
   async getBroadcast(roomId) {
     const data = await this.client.get(`broadcast:${roomId}`);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+    const broadcast = JSON.parse(data);
+    // Merge in the live counter — viewerCount lives in its own key for atomicity.
+    const counter = await this.client.get(this._viewerCounterKey(roomId));
+    broadcast.viewerCount = Math.max(0, parseInt(counter, 10) || 0);
+    return broadcast;
   }
 
   async addEdgeToBroadcast(roomId, edgeServerId) {
@@ -223,21 +266,50 @@ export class RedisClient {
     broadcast.endTime = Date.now();
 
     await this.client.set(key, JSON.stringify(broadcast));
+    // Drop from active set so getAllBroadcasts won't return ended broadcasts.
+    await this.client.sRem('broadcasts:active', roomId).catch(() => {});
+    // Tear down the viewer counter — leaving it would let the next registerBroadcast
+    // be reset cleanly, but we'd be paying for a stale key in the meantime.
+    await this.client.del(this._viewerCounterKey(roomId)).catch(() => {});
     log.info(`Broadcast ended: ${roomId}`);
     return broadcast;
   }
 
   async getAllBroadcasts() {
-    const keys = await this.client.keys('broadcast:*');
-    if (!keys?.length) return [];
+    const roomIds = await this.client.sMembers('broadcasts:active');
+    if (!roomIds?.length) return [];
 
-    const broadcasts = await Promise.all(
-      keys.map(async (key) => {
-        const data = await this.client.get(key);
-        return data ? JSON.parse(data) : null;
-      }),
-    );
-    return broadcasts.filter((b) => b?.status === 'active');
+    const broadcastKeys = roomIds.map((id) => `broadcast:${id}`);
+    const counterKeys = roomIds.map((id) => this._viewerCounterKey(id));
+    // Two MGETs, run in parallel — still O(M) round-trips, no keyspace scan.
+    const [broadcastVals, counterVals] = await Promise.all([
+      this.client.mGet(broadcastKeys),
+      this.client.mGet(counterKeys),
+    ]);
+
+    const stale = [];
+    const broadcasts = [];
+    for (let i = 0; i < roomIds.length; i++) {
+      const data = broadcastVals[i];
+      if (!data) { stale.push(roomIds[i]); continue; }
+      try {
+        const b = JSON.parse(data);
+        if (b?.status === 'active') {
+          b.viewerCount = Math.max(0, parseInt(counterVals[i], 10) || 0);
+          broadcasts.push(b);
+        } else {
+          stale.push(roomIds[i]);
+        }
+      } catch {
+        stale.push(roomIds[i]);
+      }
+    }
+
+    if (stale.length) {
+      this.client.sRem('broadcasts:active', stale).catch(() => {});
+    }
+
+    return broadcasts;
   }
 
   // Statistics

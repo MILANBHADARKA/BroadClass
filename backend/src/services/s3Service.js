@@ -14,10 +14,11 @@
 import { S3Client, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, ListPartsCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createLogger } from '../utils/logger.js';
+import { S3_MULTIPART_CHUNK_SIZE } from '../config/constants.js';
 
 const log = createLogger('s3:service');
 
-const MIN_PART_SIZE = 5 * 1024 * 1024; // AWS minimum: 5MB per part (except last)
+const MIN_PART_SIZE = S3_MULTIPART_CHUNK_SIZE;
 
 export class S3RecordingService {
   constructor(s3Config) {
@@ -125,8 +126,8 @@ export class S3RecordingService {
       upload.parts.push({ PartNumber: partNumber, ETag: etag });
       upload.uploadedBytes += chunk.length;
 
-      // Publish progress every 5MB
-      if (redisClient && upload.uploadedBytes % (5 * 1024 * 1024) === 0) {
+      // Publish progress every chunk (chunks are S3_MULTIPART_CHUNK_SIZE bytes)
+      if (redisClient && upload.uploadedBytes % S3_MULTIPART_CHUNK_SIZE === 0) {
         await redisClient.publish('recording:progress', JSON.stringify({
           recordingId,
           uploadedBytes: upload.uploadedBytes,

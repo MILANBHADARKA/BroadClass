@@ -34,7 +34,9 @@ router.get('/best-edge', verifyToken, async (req, res) => {
       return res.status(500).json({ error: 'Service unavailable' });
     }
 
-    // Verify user is enrolled in this classroom (if student)
+    // Verify user is enrolled in this classroom (if student). Fail closed on
+    // DB errors — otherwise a transient outage would let any authenticated
+    // student pull edge URLs for any classroom they're not enrolled in.
     if (req.user.role === 'STUDENT') {
       try {
         const enrollment = await prisma.enrollment.findUnique({
@@ -49,7 +51,8 @@ router.get('/best-edge', verifyToken, async (req, res) => {
           return res.status(403).json({ error: 'Not enrolled in this classroom' });
         }
       } catch (dbErr) {
-        log.warn('DB enrollment check failed:', dbErr.message);
+        log.error('DB enrollment check failed:', dbErr.message);
+        return res.status(503).json({ error: 'Enrollment check temporarily unavailable, please retry' });
       }
     }
 
@@ -143,32 +146,25 @@ router.get('/classrooms/:classroomId/broadcasts', verifyToken, async (req, res) 
       return res.status(403).json({ error: 'Not enrolled in this classroom' });
     }
 
-    // Get active broadcasts from Redis
-    // Key pattern: broadcast:{roomId}:edge
-    const broadcastKeys = await redisClient.keys(`broadcast:*:edge`);
+    // Broadcasts are keyed by roomId in Redis. By convention in this app the
+    // broadcast roomId equals the classroomId (see BroadcastButton.jsx), so we
+    // can fetch directly without scanning the keyspace.
+    //
+    // (The previous implementation scanned `broadcast:*:edge` — a pattern that
+    // never matched any key — and called `prisma.broadcast`, a model that does
+    // not exist in the schema. It always returned [] or threw at runtime.)
+    const redisClient = req.app.locals.redisClient;
     const broadcasts = [];
-
-    for (const key of broadcastKeys) {
-      const edgeData = await redisClient.get(key);
-      const roomId = key.split(':')[1];
-
-      // Check if this room belongs to this classroom
-      const broadcast = await prisma.broadcast.findUnique({
-        where: { roomId },
-        include: { classroom: true },
+    const broadcast = await redisClient.getBroadcast(req.params.classroomId);
+    if (broadcast && broadcast.status === 'active') {
+      broadcasts.push({
+        roomId: broadcast.roomId,
+        classroomId: classroom.id,
+        teacherId: classroom.teacherId,
+        startedAt: broadcast.startTime,
+        viewerCount: broadcast.viewerCount || 0,
+        edgeServerIds: broadcast.edgeServers || [],
       });
-
-      if (broadcast && broadcast.classroomId === req.params.classroomId) {
-        const edge = JSON.parse(edgeData);
-        broadcasts.push({
-          roomId,
-          teacherId: broadcast.teacherId,
-          classroomId: broadcast.classroomId,
-          startedAt: broadcast.startedAt,
-          viewerCount: edge.currentViewers || 0,
-          edgeServerId: edge.serverId,
-        });
-      }
     }
 
     res.json({ broadcasts });

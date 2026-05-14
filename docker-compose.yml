@@ -1,32 +1,32 @@
 services:
   # LOCAL REDIS (OPTIONAL)
   # Only needed if NOT using cloud Redis (Upstash).
-  redis:
-    image: redis:7-alpine
-    container_name: broadcast-redis
-    profiles: ["local-redis"]
-    ports:
-      - "6379:6379"
-    command:              
-      - redis-server
-      - --appendonly
-      - "yes"
-      - --maxmemory
-      - "256mb"
-      - --maxmemory-policy
-      - "allkeys-lru"
-      - --requirepass
-      - "${REDIS_PASSWORD:-broadcast123}"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-broadcast123}", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - broadclass-network
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-broadcast123}
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: broadcast-redis
+  #   profiles: ["local-redis"]
+  #   ports:
+  #     - "6379:6379"
+  #   command:              
+  #     - redis-server
+  #     - --appendonly
+  #     - "yes"
+  #     - --maxmemory
+  #     - "256mb"
+  #     - --maxmemory-policy
+  #     - "allkeys-lru"
+  #     - --requirepass
+  #     - "${REDIS_PASSWORD:-broadcast123}"
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-broadcast123}", "ping"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 5
+  #   networks:
+  #     - broadclass-network
+  #   environment:
+  #     - REDIS_PASSWORD=${REDIS_PASSWORD:-broadcast123}
 
   # Origin Server
   origin-server:
@@ -155,80 +155,80 @@ services:
       - broadclass-network
 
   # Edge Server 2
-  edge-server-2:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: edge
-    container_name: broadclass-edge-2
-    ports:
-      - "3003:3002"
-      - "54000-54399:54000-54399/udp"
-    environment:
-      - PORT=3002
-      - EXTERNAL_PORT=3003
-      - INTERNAL_HOST=edge-server-2
-      - NODE_ENV=${NODE_ENV:-production}
-      - ROLE=EDGE
-      - SERVER_ID=EDGE-02
-      - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
-      - ORIGIN_IP=origin-server
-      - ORIGIN_PORT=3001
-      - REDIS_URL=${REDIS_URL}
-      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
-      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
-      - MAX_CAPACITY=200
-      - HEALTH_CHECK_INTERVAL=10000
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
-      - NUM_WORKERS=2
-      - RTC_MIN_PORT=54000
-      - RTC_MAX_PORT=54399
-    depends_on:
-      origin-server:
-        condition: service_healthy
-    restart: unless-stopped
-    stop_grace_period: 10s
-    networks:
-      - broadclass-network
+  # edge-server-2:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     target: edge
+  #   container_name: broadclass-edge-2
+  #   ports:
+  #     - "3003:3002"
+  #     - "54000-54399:54000-54399/udp"
+  #   environment:
+  #     - PORT=3002
+  #     - EXTERNAL_PORT=3003
+  #     - INTERNAL_HOST=edge-server-2
+  #     - NODE_ENV=${NODE_ENV:-production}
+  #     - ROLE=EDGE
+  #     - SERVER_ID=EDGE-02
+  #     - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
+  #     - ORIGIN_IP=origin-server
+  #     - ORIGIN_PORT=3001
+  #     - REDIS_URL=${REDIS_URL}
+  #     - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+  #     - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
+  #     - MAX_CAPACITY=200
+  #     - HEALTH_CHECK_INTERVAL=10000
+  #     - LOG_LEVEL=${LOG_LEVEL:-info}
+  #     - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
+  #     - NUM_WORKERS=2
+  #     - RTC_MIN_PORT=54000
+  #     - RTC_MAX_PORT=54399
+  #   depends_on:
+  #     origin-server:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   stop_grace_period: 10s
+  #   networks:
+  #     - broadclass-network
 
-  # Edge Server 3
-  edge-server-3:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: edge
-    container_name: broadclass-edge-3
-    ports:
-      - "3004:3002"
-      - "52000-52399:52000-52399/udp"
-    environment:
-      - PORT=3002
-      - EXTERNAL_PORT=3004
-      - INTERNAL_HOST=edge-server-3
-      - NODE_ENV=${NODE_ENV:-production}
-      - ROLE=EDGE
-      - SERVER_ID=EDGE-03
-      - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
-      - ORIGIN_IP=origin-server
-      - ORIGIN_PORT=3001
-      - REDIS_URL=${REDIS_URL}
-      - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
-      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
-      - MAX_CAPACITY=200
-      - HEALTH_CHECK_INTERVAL=10000
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
-      - NUM_WORKERS=2
-      - RTC_MIN_PORT=52000
-      - RTC_MAX_PORT=52399
-    depends_on:
-      origin-server:
-        condition: service_healthy
-    restart: unless-stopped
-    stop_grace_period: 10s
-    networks:
-      - broadclass-network
+  # # Edge Server 3
+  # edge-server-3:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     target: edge
+  #   container_name: broadclass-edge-3
+  #   ports:
+  #     - "3004:3002"
+  #     - "52000-52399:52000-52399/udp"
+  #   environment:
+  #     - PORT=3002
+  #     - EXTERNAL_PORT=3004
+  #     - INTERNAL_HOST=edge-server-3
+  #     - NODE_ENV=${NODE_ENV:-production}
+  #     - ROLE=EDGE
+  #     - SERVER_ID=EDGE-03
+  #     - ANNOUNCED_IP=${ANNOUNCED_IP:-127.0.0.1}
+  #     - ORIGIN_IP=origin-server
+  #     - ORIGIN_PORT=3001
+  #     - REDIS_URL=${REDIS_URL}
+  #     - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
+  #     - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
+  #     - MAX_CAPACITY=200
+  #     - HEALTH_CHECK_INTERVAL=10000
+  #     - LOG_LEVEL=${LOG_LEVEL:-info}
+  #     - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-https://broadclass.xyz}
+  #     - NUM_WORKERS=2
+  #     - RTC_MIN_PORT=52000
+  #     - RTC_MAX_PORT=52399
+  #   depends_on:
+  #     origin-server:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   stop_grace_period: 10s
+  #   networks:
+  #     - broadclass-network
 
 # Uncomment if using local Redis:
 # volumes:
