@@ -20,9 +20,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Vendor SDKs land in later phases. Pull only what's needed where it's needed.
+# Vendor SDKs. Pull only what's needed where it's needed.
+# The `llm` extra ships all three LLM SDKs so a user can switch
+# ANSWER_PROVIDER/MODERATION_PROVIDER/EMBEDDING_PROVIDER purely via env
+# without rebuilding the image.
 stt = ["deepgram-sdk>=3.7,<4.0"]
-llm = ["groq>=0.11,<1.0"]
+llm = [
+  "groq>=0.11,<1.0",
+  "openai>=1.40,<2.0",
+  "anthropic>=0.30,<1.0",
+]
 embeddings = [
   "sentence-transformers>=3.0,<6.0",
   "torch>=2.2,<3.0",

@@ -142,14 +142,30 @@ services:
       - REDIS_URL=${REDIS_URL}
       # Shared with origin / system-manager for internal-only calls.
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
-      # Provider keys (optional in Phase 0; required from Phase 1+).
+      # Provider keys. Only the ones for the providers you've selected
+      # below need to be populated; others can be left empty.
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
-      # Model selection (override-able via env).
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Provider selection — set in .env to switch vendors without rebuilding.
+      #   STT_PROVIDER:        deepgram
+      #   EMBEDDING_PROVIDER:  sentence_transformers | openai
+      #   ANSWER_PROVIDER:     groq | openai | anthropic
+      #   MODERATION_PROVIDER: groq | openai
+      - STT_PROVIDER=${STT_PROVIDER:-deepgram}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-sentence_transformers}
+      - ANSWER_PROVIDER=${ANSWER_PROVIDER:-groq}
+      - MODERATION_PROVIDER=${MODERATION_PROVIDER:-groq}
+      # Model selection per provider (override-able via env).
       - ANSWER_MODEL_PRIMARY=${ANSWER_MODEL_PRIMARY:-llama-3.3-70b-versatile}
       - ANSWER_MODEL_FALLBACK=${ANSWER_MODEL_FALLBACK:-llama-3.1-8b-instant}
       - MODERATION_MODEL=${MODERATION_MODEL:-llama-3.1-8b-instant}
       - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-sentence-transformers/all-MiniLM-L6-v2}
+      - OPENAI_ANSWER_MODEL=${OPENAI_ANSWER_MODEL:-gpt-4o-mini}
+      - OPENAI_MODERATION_MODEL=${OPENAI_MODERATION_MODEL:-omni-moderation-latest}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - ANTHROPIC_ANSWER_MODEL=${ANTHROPIC_ANSWER_MODEL:-claude-haiku-4-5-20251001}
     restart: unless-stopped
     stop_grace_period: 15s
     healthcheck:

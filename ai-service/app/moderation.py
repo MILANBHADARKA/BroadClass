@@ -28,10 +28,28 @@ _provider_singleton: ModerationProvider | None = None
 
 
 def _default_provider() -> ModerationProvider:
+    """Dispatch on settings.moderation_provider. Lazy-imports per branch."""
     global _provider_singleton
-    if _provider_singleton is None:
+    if _provider_singleton is not None:
+        return _provider_singleton
+
+    # Local import to avoid the circular-ish config import at module load.
+    from .config import get_settings
+    settings = get_settings()
+    name = (settings.moderation_provider or "groq").lower()
+
+    if name == "groq":
         from .providers.groq_moderation import GroqModeration
         _provider_singleton = GroqModeration()
+    elif name == "openai":
+        from .providers.openai_moderation import OpenAIModeration
+        _provider_singleton = OpenAIModeration()
+    else:
+        raise RuntimeError(
+            f"Unknown MODERATION_PROVIDER={name!r}. Supported: groq, openai"
+        )
+
+    log.info("moderation.provider.selected", provider=name)
     return _provider_singleton
 
 

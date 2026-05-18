@@ -39,10 +39,31 @@ _provider_singleton: AnswerProvider | None = None
 
 
 def _default_provider() -> AnswerProvider:
+    """Dispatch on settings.answer_provider. Each branch lazy-imports its
+    SDK so a missing optional dep (e.g. `anthropic`) doesn't break startup
+    for users on a different provider."""
     global _provider_singleton
-    if _provider_singleton is None:
+    if _provider_singleton is not None:
+        return _provider_singleton
+
+    settings = get_settings()
+    name = (settings.answer_provider or "groq").lower()
+
+    if name == "groq":
         from .providers.groq_answer import GroqAnswer
         _provider_singleton = GroqAnswer()
+    elif name == "openai":
+        from .providers.openai_answer import OpenAIAnswer
+        _provider_singleton = OpenAIAnswer()
+    elif name == "anthropic":
+        from .providers.anthropic_answer import AnthropicAnswer
+        _provider_singleton = AnthropicAnswer()
+    else:
+        raise RuntimeError(
+            f"Unknown ANSWER_PROVIDER={name!r}. Supported: groq, openai, anthropic"
+        )
+
+    log.info("answer.provider.selected", provider=name)
     return _provider_singleton
 
 

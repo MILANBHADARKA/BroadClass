@@ -62,17 +62,41 @@ _embedding_singleton: EmbeddingProvider | None = None
 
 
 def _default_stt() -> STTProvider:
-    # Import lazily so the deepgram SDK isn't required at module load
-    # (it's an optional extra; absence shouldn't break tests).
-    from .providers.deepgram_stt import DeepgramSTT
-    return DeepgramSTT()
+    """Dispatch on settings.stt_provider. Only Deepgram is wired today;
+    add new branches here as you implement them. Streaming Whisper, for
+    example, would require its own provider class first."""
+    settings = get_settings()
+    name = (settings.stt_provider or "deepgram").lower()
+    if name == "deepgram":
+        # Lazy import so the deepgram SDK isn't required at module load.
+        from .providers.deepgram_stt import DeepgramSTT
+        return DeepgramSTT()
+    raise RuntimeError(
+        f"Unknown STT_PROVIDER={name!r}. Supported: deepgram"
+    )
 
 
 def _default_embedding() -> EmbeddingProvider:
     global _embedding_singleton
-    if _embedding_singleton is None:
+    if _embedding_singleton is not None:
+        return _embedding_singleton
+
+    settings = get_settings()
+    name = (settings.embedding_provider or "sentence_transformers").lower()
+
+    if name == "sentence_transformers":
         from .providers.sentence_transformers_local import SentenceTransformersEmbedding
         _embedding_singleton = SentenceTransformersEmbedding()
+    elif name == "openai":
+        from .providers.openai_embedding import OpenAIEmbedding
+        _embedding_singleton = OpenAIEmbedding()
+    else:
+        raise RuntimeError(
+            f"Unknown EMBEDDING_PROVIDER={name!r}. "
+            f"Supported: sentence_transformers, openai"
+        )
+
+    log.info("embedding.provider.selected", provider=name)
     return _embedding_singleton
 
 
