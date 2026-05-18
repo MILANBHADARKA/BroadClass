@@ -7,6 +7,7 @@ import { RedisClient } from '../services/redisClient.js';
 import { registerOriginRoutes } from './routes.js';
 import { registerOriginSocketHandlers } from './socketHandlers.js';
 import { OriginRecordingHandler } from './recordingHandler.js';
+import { OriginTranscriptionHandler } from './transcriptionHandler.js';
 import { createLogger } from '../utils/logger.js';
 import edgeRegistryRoutes from './edgeRegistryRoutes.js';
 import { setupEdgeProxy } from './edgeProxy.js';
@@ -104,12 +105,35 @@ async function start() {
   await recordingHandler.setupRedisListeners();
   log.info('Recording handler initialized');
 
-  // Redis pub/sub → live viewer count updates
+  // Initialize transcription handler (Smart Chat Phase 1). Listens for
+  // transcription:control Redis events and pipes audio to the ai-service.
+  // Optional: if AI_SERVICE_INTERNAL_URL is not configured we skip startup
+  // so the rest of the broadcast pipeline still works without ai-service.
+  let transcriptionHandler = null;
+  if (process.env.AI_SERVICE_INTERNAL_URL) {
+    transcriptionHandler = new OriginTranscriptionHandler(redisClient, {
+      aiServiceUrl: process.env.AI_SERVICE_INTERNAL_URL,
+      internalApiKey: process.env.INTERNAL_API_KEY || 'broadclass-internal-key-change-in-production',
+      containerIp,
+    });
+    app.locals.transcriptionHandler = transcriptionHandler;
+    await transcriptionHandler.setupRedisListeners();
+    log.info('Transcription handler initialized (Smart Chat)');
+  } else {
+    log.warn('AI_SERVICE_INTERNAL_URL not set — transcription disabled');
+  }
+
+  // Redis pub/sub → live viewer count updates. Also drives Phase 5
+  // auto-pause: when viewerCount hits 0, the transcription handler
+  // pauses the audio consumer to save STT minutes.
   await redisClient.subscribeToViewerCount((payload) => {
     io.emit('viewerCount', payload);
+    if (transcriptionHandler && payload?.roomId != null) {
+      transcriptionHandler.setViewerCount(payload.roomId, payload.viewerCount ?? 0);
+    }
   });
 
-  registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker, recordingHandler });
+  registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker, recordingHandler, transcriptionHandler });
 
   // 5. Listen
   httpServer.listen(config.port, () => {
@@ -183,8 +207,9 @@ async function start() {
     // Cleanup workers
     workers.forEach((w) => { try { w.close(); } catch (_) {} });
 
-    // Shutdown recording handler
+    // Shutdown recording + transcription handlers
     await recordingHandler.shutdown();
+    if (transcriptionHandler) await transcriptionHandler.shutdown();
 
     // Disconnect services
     await prisma.$disconnect();

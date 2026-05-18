@@ -8,6 +8,7 @@ import { mediaCodecs } from '../config/mediaCodecs.js';
 import { createLogger } from '../utils/logger.js';
 import { connectEdgeServers, cleanupPipes } from './pipeManager.js';
 import prisma from '../services/prisma.js';
+import { CHANNEL_TRANSCRIPTION_CONTROL } from '../services/redisClient.js';
 
 const log = createLogger('origin:socket');
 
@@ -21,7 +22,7 @@ const log = createLogger('origin:socket');
  * @param {Function} deps.getNextWorker
  * @param {OriginRecordingHandler} deps.recordingHandler – for recording lifecycle
  */
-export function registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker, recordingHandler }) {
+export function registerOriginSocketHandlers({ io, config, redisClient, broadcasts, state, getNextWorker, recordingHandler, transcriptionHandler }) {
   /** Helper: build broadcast list for clients */
   async function getBroadcastList() {
     const entries = Array.from(broadcasts.entries());
@@ -46,9 +47,17 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
 
     log.info(`Cleaning up broadcast: ${roomId}`);
 
-    // Unregister from recording handler
+    // Unregister from recording + transcription handlers
     if (recordingHandler) {
       recordingHandler.unregisterBroadcastRoom(roomId);
+    }
+    if (transcriptionHandler) {
+      transcriptionHandler.unregisterBroadcastRoom(roomId);
+      // Fire-and-forget — the handler itself is idempotent on duplicate stops.
+      redisClient.publish(
+        CHANNEL_TRANSCRIPTION_CONTROL,
+        JSON.stringify({ type: 'stop', broadcastId: roomId }),
+      ).catch((err) => log.warn(`Failed to publish transcription:stop for ${roomId}:`, err.message));
     }
 
     // Cancel any pending grace timer
@@ -167,6 +176,11 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
             if (recordingHandler) {
               recordingHandler.registerBroadcastRoom(roomId, broadcast);
               log.info(`Broadcast registered with recording handler: ${roomId}`);
+            }
+            // Register with transcription handler so it can locate the audio
+            // producer once we publish transcription:control start below.
+            if (transcriptionHandler) {
+              transcriptionHandler.registerBroadcastRoom(roomId, broadcast);
             }
           }
 
@@ -318,14 +332,43 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
         // Publish to System-Manager via Redis (on first producer)
         if (broadcast.producers.size === 1) {
           try {
-            await redisClient.publish('broadcast:list-updated', JSON.stringify({ 
-              action: 'created', 
+            await redisClient.publish('broadcast:list-updated', JSON.stringify({
+              action: 'created',
               roomId,
               teacherId: socket.user?.id,
               startedAt: broadcast.createdAt,
             }));
           } catch (err) {
             log.warn('Failed to publish broadcast update to Redis:', err.message);
+          }
+        }
+
+        // Kick off transcription the moment the audio producer arrives.
+        // Audio and video are produced via separate calls — fire only on
+        // audio. Idempotent: duplicate start events are no-ops in the handler.
+        //
+        // Skip entirely if the classroom owner has turned transcription off
+        // (Phase 5 toggle). Failure to look up the classroom defaults to ON
+        // — better to over-transcribe than to silently fail-closed.
+        if (kind === 'audio' && transcriptionHandler) {
+          let transcriptionEnabled = true;
+          try {
+            const cls = await prisma.classroom.findUnique({
+              where: { id: roomId },
+              select: { transcriptionEnabled: true },
+            });
+            if (cls && cls.transcriptionEnabled === false) transcriptionEnabled = false;
+          } catch (err) {
+            log.warn(`Transcription gate DB check failed (defaulting ON):`, err.message);
+          }
+          if (transcriptionEnabled) {
+            redisClient.publish(
+              CHANNEL_TRANSCRIPTION_CONTROL,
+              JSON.stringify({ type: 'start', broadcastId: roomId, classroomId: roomId }),
+            ).catch((err) =>
+              log.warn(`Failed to publish transcription:start for ${roomId}:`, err.message));
+          } else {
+            log.info(`Transcription disabled for classroom ${roomId} — skipping`);
           }
         }
       } catch (err) {

@@ -237,13 +237,16 @@ router.patch('/:id', verifyRole('TEACHER'), async (req, res) => {
     if (!classroom) return res.status(404).json({ error: 'Classroom not found' });
     if (classroom.teacherId !== req.user.id) return res.status(403).json({ error: 'Not your classroom' });
 
-    const { name, description, subject } = req.body;
+    const { name, description, subject, aiChatEnabled, transcriptionEnabled } = req.body;
     const updated = await prisma.classroom.update({
       where: { id: req.params.id },
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
         ...(subject !== undefined && { subject }),
+        // Smart Chat toggles — accept booleans only; ignore anything else.
+        ...(typeof aiChatEnabled === 'boolean' && { aiChatEnabled }),
+        ...(typeof transcriptionEnabled === 'boolean' && { transcriptionEnabled }),
       },
       include: {
         _count: { select: { enrollments: true } },

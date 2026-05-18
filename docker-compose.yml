@@ -61,6 +61,8 @@ services:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_PREFIX=${S3_PREFIX:-recordings}
+      # Smart Chat (Phase 1+): where Origin pipes transcription audio.
+      - AI_SERVICE_INTERNAL_URL=${AI_SERVICE_INTERNAL_URL:-http://ai-service:8080}
     # Uncomment if using local Redis:
     # depends_on:
     #   redis:
@@ -94,6 +96,10 @@ services:
       - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
       - JWT_EXPIRES_IN=7d
       - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
+      # Shared internal-only key — system-manager uses it to call ai-service
+      # /moderate and /answer. Must match the value passed to ai-service and
+      # origin (both also pick this up).
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       # S3 Recording Configuration
       - S3_BUCKET=${S3_BUCKET:-broadclass}
@@ -101,6 +107,8 @@ services:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_PREFIX=${S3_PREFIX:-recordings}
+      # Smart Chat (Phase 3+): where System-Manager calls /answer & /moderate.
+      - AI_SERVICE_INTERNAL_URL=${AI_SERVICE_INTERNAL_URL:-http://ai-service:8080}
     # Uncomment if using local Redis:
     # depends_on:
     #   redis:
@@ -113,6 +121,43 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    networks:
+      - broadclass-network
+
+  # AI Service (Smart Chat: live transcription + RAG)
+  # Phase 0: scaffold only — exposes /health and subscribes to transcription:control.
+  # Phase 1+ adds Deepgram streaming STT, embeddings, and the /answer endpoint.
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: broadclass-ai-service
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - NODE_ENV=${NODE_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      # Shared with origin / system-manager for internal-only calls.
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
+      # Provider keys (optional in Phase 0; required from Phase 1+).
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      # Model selection (override-able via env).
+      - ANSWER_MODEL_PRIMARY=${ANSWER_MODEL_PRIMARY:-llama-3.3-70b-versatile}
+      - ANSWER_MODEL_FALLBACK=${ANSWER_MODEL_FALLBACK:-llama-3.1-8b-instant}
+      - MODERATION_MODEL=${MODERATION_MODEL:-llama-3.1-8b-instant}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-sentence-transformers/all-MiniLM-L6-v2}
+    restart: unless-stopped
+    stop_grace_period: 15s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8080/health/live', timeout=3); sys.exit(0)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - broadclass-network
 

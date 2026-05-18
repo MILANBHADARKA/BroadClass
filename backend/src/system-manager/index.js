@@ -11,6 +11,7 @@
 
 import express from 'express';
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { createServer } from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -20,13 +21,17 @@ import prisma from '../services/prisma.js';
 import { RedisClient } from '../services/redisClient.js';
 import { createLogger } from '../utils/logger.js';
 import { managerConfig } from './config.js';
+import { socketAuthMiddleware } from '../middleware/auth.js';
 import authRoutes from './authRoutes.js';
 import classroomRoutes from './classroomRoutes.js';
 import broadcastRoutes from './broadcastRoutes.js';
 import recordingRoutes from './recordingRoutes.js';
+import chatRoutes from './chatRoutes.js';
 import { registerSocketHandlers } from './socketHandlers.js';
+import { registerChatSocketHandlers } from './chatSocketHandlers.js';
 import S3RecordingService from '../services/s3Service.js';
 import { startRecordingJanitor } from './recordingJanitor.js';
+import { startSmartChatJanitor } from './smartChatJanitor.js';
 
 const log = createLogger('system-manager');
 
@@ -82,6 +87,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/classrooms', classroomRoutes);
 app.use('/api', broadcastRoutes);
 app.use('/api/recordings', recordingRoutes);
+app.use('/api/chat', chatRoutes);
 
 /**
  * 404 handler
@@ -135,11 +141,31 @@ async function start() {
     app.locals.redisClient = redisClient;
     app.locals.s3Service = s3Service;
 
+    // Socket.IO Redis adapter — required for multi-instance fan-out. With
+    // a single replica it's a no-op, but wiring it now means horizontal
+    // scaling is just a `replicas: N` change in compose later.
+    try {
+      const pubClient = redisClient.client.duplicate();
+      const subClient = redisClient.client.duplicate();
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+      io.adapter(createAdapter(pubClient, subClient));
+      log.info('✅ Socket.IO Redis adapter attached');
+    } catch (err) {
+      log.warn('Socket.IO Redis adapter failed — running single-instance only:', err.message);
+    }
+
+    // Socket.IO auth — chat events require an authenticated user
+    // (socket.user populated from JWT in handshake/cookie).
+    io.use(socketAuthMiddleware);
+
     // Register Socket.IO handlers (pass redisClient for pub/sub)
     const socketManager = registerSocketHandlers(io, redisClient);
+    const chatSocketManager = registerChatSocketHandlers({ io, redisClient });
 
     // Start janitor that reaps recordings stuck in PROCESSING.
     const janitor = startRecordingJanitor();
+    // Smart Chat retention — deletes old chat + transcript rows.
+    const smartChatJanitor = startSmartChatJanitor();
 
     // Listen
     httpServer.listen(managerConfig.port, () => {
@@ -154,6 +180,9 @@ async function start() {
       httpServer.close(async () => {
         try {
           janitor.stop();
+          smartChatJanitor.stop();
+          await chatSocketManager?.shutdown();
+          await socketManager?.shutdown();
           await s3Service?.cleanup();
           await redisClient.disconnect();
           await prisma.$disconnect();

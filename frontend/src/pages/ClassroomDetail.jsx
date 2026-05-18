@@ -6,6 +6,10 @@ import { useAuth } from '../context/AuthContext';
 import BroadcastButton from '../components/BroadcastButton';
 import BroadcastList from '../components/BroadcastList';
 import RecordingLibrary from '../components/RecordingLibrary';
+import ChatPanel from '../components/ChatPanel';
+import TeacherQueuePanel from '../components/TeacherQueuePanel';
+import SmartChatSettings from '../components/SmartChatSettings';
+import TranscriptPanel from '../components/TranscriptPanel';
 
 // System-Manager (port 3000) for APIs and real-time updates
 const MANAGER_SERVER = import.meta.env.VITE_MANAGER_URL || 'http://localhost:3000';
@@ -290,6 +294,45 @@ export default function ClassroomDetail() {
             </>
           )}
         </div>
+
+        {/* Smart Chat settings — owner-teacher only. Visible all the time
+            (not just during a live broadcast) so the teacher can preconfigure
+            before going live. */}
+        {isOwner && classroom && (
+          <div className="mb-6">
+            <SmartChatSettings
+              classroom={classroom}
+              onChange={(patch) => setClassroom((c) => ({ ...c, ...patch }))}
+            />
+          </div>
+        )}
+
+        {/* Teacher Q&A queue — visible only to the broadcast owner during
+            an active broadcast. Surfaces questions the AI couldn't answer
+            from the lecture so the teacher can reply by hand. */}
+        {broadcasts.length > 0 && isOwner && (
+          <div className="mb-6">
+            <TeacherQueuePanel broadcastId={classroomId} enabled={isOwner} />
+          </div>
+        )}
+
+        {/* Live transcript — toggleable. Collapsed by default; opens its
+            socket subscription only when expanded. Visible during active
+            broadcasts; respects the classroom's transcriptionEnabled flag
+            (Backend won't publish anything if it's off). */}
+        {broadcasts.length > 0 && classroom?.transcriptionEnabled !== false && (
+          <div className="mb-6">
+            <TranscriptPanel broadcastId={classroomId} />
+          </div>
+        )}
+
+        {/* Live Chat — visible only when a broadcast is active in this classroom.
+            In this app broadcastId === classroomId by convention. */}
+        {broadcasts.length > 0 && (
+          <div className="mb-8">
+            <ChatPanel broadcastId={classroomId} />
+          </div>
+        )}
 
         {/* Recording Library */}
         <div className="mb-8">

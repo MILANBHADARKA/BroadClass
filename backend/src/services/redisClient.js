@@ -13,6 +13,13 @@ import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('redis');
 
+// Channel name constants — MUST stay in sync with ai-service/app/redis_client.py.
+// Any change here must be mirrored there in the same commit.
+export const CHANNEL_TRANSCRIPTION_CONTROL = 'transcription:control';   // start|stop lifecycle
+export const CHANNEL_TRANSCRIPTION_CHUNK = 'transcription:chunk';       // streamed transcript text (UI)
+export const CHANNEL_CHAT_MESSAGE = 'chat:message';
+export const CHANNEL_CHAT_STATUS = 'chat:status-update';
+
 export class RedisClient {
   constructor() {
     this.client = null;

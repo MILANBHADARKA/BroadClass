@@ -1,0 +1,49 @@
+[project]
+name = "broadclass-ai-service"
+version = "0.1.0"
+description = "Smart Chat: live transcription + RAG over lecture transcripts for BroadClass"
+requires-python = ">=3.11"
+
+# Pinning ranges, not exact versions — we want patch updates without churn.
+# Provider SDKs (deepgram-sdk, groq) come in Phase 1/3 to keep Phase 0 install
+# lean. sentence-transformers is heavy; isolated to embed_worker imports.
+dependencies = [
+  "fastapi>=0.115,<0.120",
+  "uvicorn[standard]>=0.30,<0.40",
+  "asyncpg>=0.29,<0.31",
+  "pgvector>=0.3.5,<0.5",
+  "redis>=5.0,<6.0",
+  "pydantic>=2.7,<3.0",
+  "pydantic-settings>=2.4,<3.0",
+  "httpx>=0.27,<0.30",
+  "structlog>=24.1,<26.0",
+]
+
+[project.optional-dependencies]
+# Vendor SDKs land in later phases. Pull only what's needed where it's needed.
+stt = ["deepgram-sdk>=3.7,<4.0"]
+llm = ["groq>=0.11,<1.0"]
+embeddings = [
+  "sentence-transformers>=3.0,<6.0",
+  "torch>=2.2,<3.0",
+]
+dev = [
+  "pytest>=8.0,<9.0",
+  "pytest-asyncio>=0.23,<1.0",
+  "ruff>=0.6,<1.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

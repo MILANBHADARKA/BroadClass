@@ -32,6 +32,8 @@ model User {
   recordings        Recording[]  @relation("UserRecordings") // recordings this teacher created
   recordingPerms    RecordingPermission[] @relation("RecordingPermissions") // permissions granted to this user
   grantedPermissions RecordingPermission[] @relation("GrantedPermissions") // permissions granted by this user
+  chatMessages      ChatMessage[] // messages this user authored (questions or answers)
+  chatUpvotes       ChatUpvote[]  // upvotes this user has cast
 }
 
 model Classroom {
@@ -44,10 +46,16 @@ model Classroom {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Smart Chat toggles (Phase 5). Default ON to preserve existing behavior
+  // for classrooms that existed before the feature shipped.
+  aiChatEnabled        Boolean @default(true)
+  transcriptionEnabled Boolean @default(true)
+
   // Relations
   teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   enrollments Enrollment[]
   recordings  Recording[]  @relation("TeacherRecordings")
+  transcripts Transcript[]
 
   @@index([teacherId])
   @@index([code])
@@ -136,13 +144,117 @@ model RecordingPermission {
   accessLevel String   @default("view") // "view", "edit", "revoke"
   grantedAt   DateTime @default(now())
   grantedBy   String?  // who granted this permission (teacher ID) - nullable for SetNull cascade
-  
+
   // Relations
   recording Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
   user      User     @relation("RecordingPermissions", fields: [userId], references: [id], onDelete: Cascade)
   grantedByUser User? @relation("GrantedPermissions", fields: [grantedBy], references: [id], onDelete: SetNull)
-  
+
   @@unique([recordingId, userId])
   @@index([recordingId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Smart Chat (Live Transcription + RAG)
+// Requires the pgvector PostgreSQL extension. The migration that creates
+// these tables also runs `CREATE EXTENSION IF NOT EXISTS vector;` and the
+// ivfflat index on TranscriptChunk.embedding.
+// ─────────────────────────────────────────────────────────────────────
+
+enum ChatRole {
+  VIEWER_QUESTION    // student-authored question
+  AI_ANSWER          // RAG-generated answer to a question (parentId set)
+  TEACHER_ANSWER     // broadcaster-authored reply to a question (parentId set)
+  SYSTEM             // platform notice (e.g. "Recording started")
+}
+
+enum ChatStatus {
+  VISIBLE
+  AWAITING_TEACHER       // fall-through: AI declined; surfaced in teacher Q&A queue
+  ANSWERED_BY_TEACHER
+  HIDDEN_BY_MODERATION
+  HIDDEN_BY_TEACHER
+}
+
+// One transcript per broadcast session. Acts as the parent for chunks.
+model Transcript {
+  id          String    @id @default(uuid())
+  classroomId String
+  broadcastId String    // mediasoup roomId; for fast lookup by live broadcast
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  language    String?   // detected by STT (e.g. "en", "hi")
+
+  classroom Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  chunks    TranscriptChunk[]
+
+  @@index([broadcastId])
+  @@index([classroomId, startedAt])
+}
+
+// A semantically-bounded slice of the transcript, with its embedding vector.
+// The vector index is created in the migration via raw SQL (Prisma can't
+// express ivfflat declaratively).
+model TranscriptChunk {
+  id               String   @id @default(uuid())
+  transcriptId     String
+  broadcastId      String   // denormalized — speeds up "search within this broadcast"
+  chunkIndex       Int
+  text             String
+  startMs          Int      // milliseconds from broadcast start
+  endMs            Int
+  embedding        Unsupported("vector(384)")?
+  embeddingVersion String   @default("st-MiniLM-L6-v2-v1") // for re-embed safety
+  speakerLabel     String?  // reserved for future co-host support
+  createdAt        DateTime @default(now())
+
+  transcript Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@index([transcriptId, chunkIndex])
+  @@index([broadcastId])
+}
+
+// Public chat message scoped to a broadcast. Questions, AI answers, and
+// teacher answers all live in this single table — threaded via parentId.
+model ChatMessage {
+  id               String     @id @default(uuid())
+  broadcastId      String
+  classroomId      String
+  userId           String     // student or teacher (author)
+  role             ChatRole
+  content          String
+  parentId         String?    // AI/teacher answer → original VIEWER_QUESTION
+  status           ChatStatus @default(VISIBLE)
+  broadcastMs      Int?       // ms-from-broadcast-start, for recording replay sync
+  // AI answer metadata (null for non-AI messages):
+  aiConfidence     String?    // "high" | "low" — from LLM structured output
+  sourceChunkIds   String[]   @default([]) // TranscriptChunk.id citations
+  // Moderation flags accumulated by the moderation pipeline:
+  moderationFlags  String[]   @default([])
+  createdAt        DateTime   @default(now())
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  ChatMessage?  @relation("ChatThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies ChatMessage[] @relation("ChatThread")
+  upvotes ChatUpvote[]
+
+  @@index([broadcastId, createdAt])
+  @@index([broadcastId, status])
+  @@index([parentId])
+}
+
+// Student "+1" on a question — drives Q&A queue ordering for the teacher.
+model ChatUpvote {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
   @@index([userId])
 }

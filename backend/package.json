@@ -9,7 +9,11 @@
     "start:manager": "node src/system-manager/index.js",
     "dev:origin": "nodemon src/origin/index.js",
     "dev:edge": "nodemon src/edge/index.js",
-    "dev:manager": "nodemon src/system-manager/index.js"
+    "dev:manager": "nodemon src/system-manager/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma deploy",
+    "prisma:studio": "prisma studio"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +24,7 @@
     "@aws-sdk/s3-request-presigner": "^3.700.0",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
+    "@socket.io/redis-adapter": "^8.3.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -35,6 +40,7 @@
     "socket.io": "^4.6.1",
     "uuid": "^13.0.0",
     "validator": "^13.15.26",
+    "ws": "^8.18.0",
     "xss": "^1.0.15"
   },
   "optionalDependencies": {
