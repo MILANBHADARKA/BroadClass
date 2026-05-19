@@ -34,6 +34,7 @@ model User {
   grantedPermissions RecordingPermission[] @relation("GrantedPermissions") // permissions granted by this user
   chatMessages      ChatMessage[] // messages this user authored (questions or answers)
   chatUpvotes       ChatUpvote[]  // upvotes this user has cast
+  broadcastSessions BroadcastSession[] @relation("UserBroadcastSessions") // sessions this user has broadcast
 }
 
 model Classroom {
@@ -56,6 +57,7 @@ model Classroom {
   enrollments Enrollment[]
   recordings  Recording[]  @relation("TeacherRecordings")
   transcripts Transcript[]
+  broadcastSessions BroadcastSession[]
 
   @@index([teacherId])
   @@index([code])
@@ -97,6 +99,9 @@ model Recording {
   classroomId String
   teacherId   String   // who started the recording
   broadcastId String?  // room ID of the broadcast
+  // Smart Chat Phase 8: links the recording to its lecture session so the
+  // replay UI can load the chat history that played alongside this video.
+  sessionId   String?  // null for legacy recordings made before sessions existed
   title       String   @default("Untitled Recording")
   description String?
   
@@ -124,12 +129,14 @@ model Recording {
   // Relations
   classroom  Classroom          @relation("TeacherRecordings", fields: [classroomId], references: [id], onDelete: Cascade)
   teacher    User               @relation("UserRecordings", fields: [teacherId], references: [id], onDelete: Cascade)
+  session    BroadcastSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   permissions RecordingPermission[]
-  
+
   @@index([classroomId])
   @@index([teacherId])
   @@index([status])
   @@index([recordingStarted])
+  @@index([sessionId])
   // Composite indexes for the two hot list-query shapes:
   //   - per-classroom recording lists, filtered by status (READY/PROCESSING/etc)
   //   - teacher's own recordings ordered chronologically
@@ -181,15 +188,17 @@ enum ChatStatus {
 model Transcript {
   id          String    @id @default(uuid())
   classroomId String
-  broadcastId String    // mediasoup roomId; for fast lookup by live broadcast
+  broadcastId String    // mediasoup roomId — kept for media-plane traceability, not the hot query key
+  sessionId   String    // FK → BroadcastSession.id (Phase 8 — replaces broadcastId for state scoping)
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
   language    String?   // detected by STT (e.g. "en", "hi")
 
   classroom Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  session   BroadcastSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   chunks    TranscriptChunk[]
 
-  @@index([broadcastId])
+  @@index([sessionId])
   @@index([classroomId, startedAt])
 }
 
@@ -199,7 +208,8 @@ model Transcript {
 model TranscriptChunk {
   id               String   @id @default(uuid())
   transcriptId     String
-  broadcastId      String   // denormalized — speeds up "search within this broadcast"
+  broadcastId      String   // mediasoup roomId — kept for traceability, not the hot query key
+  sessionId        String   // FK → BroadcastSession.id (Phase 8 — primary scope for vector search)
   chunkIndex       Int
   text             String
   startMs          Int      // milliseconds from broadcast start
@@ -209,17 +219,19 @@ model TranscriptChunk {
   speakerLabel     String?  // reserved for future co-host support
   createdAt        DateTime @default(now())
 
-  transcript Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  transcript Transcript        @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  session    BroadcastSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([transcriptId, chunkIndex])
-  @@index([broadcastId])
+  @@index([sessionId])
 }
 
-// Public chat message scoped to a broadcast. Questions, AI answers, and
-// teacher answers all live in this single table — threaded via parentId.
+// Public chat message scoped to a broadcast session. Questions, AI answers,
+// and teacher answers all live in this single table — threaded via parentId.
 model ChatMessage {
   id               String     @id @default(uuid())
-  broadcastId      String
+  broadcastId      String     // mediasoup roomId — kept for traceability, not the hot query key
+  sessionId        String     // FK → BroadcastSession.id (Phase 8 — scoping for live + history)
   classroomId      String
   userId           String     // student or teacher (author)
   role             ChatRole
@@ -234,13 +246,14 @@ model ChatMessage {
   moderationFlags  String[]   @default([])
   createdAt        DateTime   @default(now())
 
-  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent  ChatMessage?  @relation("ChatThread", fields: [parentId], references: [id], onDelete: SetNull)
-  replies ChatMessage[] @relation("ChatThread")
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session BroadcastSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parent  ChatMessage?     @relation("ChatThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies ChatMessage[]    @relation("ChatThread")
   upvotes ChatUpvote[]
 
-  @@index([broadcastId, createdAt])
-  @@index([broadcastId, status])
+  @@index([sessionId, createdAt])
+  @@index([sessionId, status])
   @@index([parentId])
 }
 
@@ -257,4 +270,35 @@ model ChatUpvote {
   @@unique([messageId, userId])
   @@index([messageId])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// BroadcastSession (Smart Chat Phase 8)
+//
+// One row per distinct lecture-instance — created when a teacher starts
+// broadcasting and ended when they stop. Distinct from `Classroom` (which
+// is the persistent course) and `Recording` (an optional artifact). All
+// time-bounded Smart Chat state (transcripts, chunks, chat messages) is
+// scoped via FK to this table so RAG retrieval doesn't bleed between
+// unrelated lectures in the same classroom.
+//
+// The "Past Lectures" UI lists rows from here.
+// ─────────────────────────────────────────────────────────────────────
+model BroadcastSession {
+  id            String    @id @default(uuid())
+  classroomId   String
+  broadcasterId String    // user.id of the teacher who started the session
+  title         String    @default("")  // auto-filled "Lecture · <date> <time>"; teacher can edit
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+
+  classroom   Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  broadcaster User              @relation("UserBroadcastSessions", fields: [broadcasterId], references: [id], onDelete: Cascade)
+  transcripts Transcript[]
+  chunks      TranscriptChunk[]
+  messages    ChatMessage[]
+  recordings  Recording[]
+
+  @@index([classroomId, startedAt(sort: Desc)])
+  @@index([broadcasterId, startedAt(sort: Desc)])
 }

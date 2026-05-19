@@ -16,12 +16,12 @@ import { createServer } from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import prisma from '../services/prisma.js';
 import { RedisClient } from '../services/redisClient.js';
 import { createLogger } from '../utils/logger.js';
 import { managerConfig } from './config.js';
 import { socketAuthMiddleware } from '../middleware/auth.js';
+import { apiRateLimiter } from '../middleware/rateLimiter.js';
 import authRoutes from './authRoutes.js';
 import classroomRoutes from './classroomRoutes.js';
 import broadcastRoutes from './broadcastRoutes.js';
@@ -65,13 +65,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP',
-});
-app.use('/api/', limiter);
+// Rate limiting — uses the shared apiRateLimiter which:
+//  - returns JSON on 429 (so res.json() in the client doesn't blow up),
+//  - allows 1000 req/min/IP (room for legitimate active sessions),
+//  - honors DISABLE_RATE_LIMIT=true in dev.
+app.use('/api/', apiRateLimiter);
 
 /**
  * Health check

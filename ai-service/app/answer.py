@@ -79,7 +79,10 @@ def _get_provider() -> AnswerProvider:
 
 
 class AnswerRequest(BaseModel):
-    broadcastId: str = Field(..., min_length=1)
+    # Phase 8: sessionId is the new primary scope. broadcastId kept for
+    # diagnostics / log correlation but no longer used for retrieval.
+    sessionId: str = Field(..., min_length=1)
+    broadcastId: str | None = Field(default=None)
     content: str = Field(..., min_length=1, max_length=4000)
 
 
@@ -115,10 +118,10 @@ async def answer(req: AnswerRequest) -> AnswerResponseModel:
         log.warning("answer.embed.failed", error=str(exc))
         raise HTTPException(status_code=503, detail="embedding unavailable")
 
-    # 2. Retrieve top-K chunks for this broadcast.
+    # 2. Retrieve top-K chunks for this SESSION (Phase 8).
     try:
         rows = await chunks_store.search_similar(
-            broadcast_id=req.broadcastId,
+            session_id=req.sessionId,
             query_embedding=query_vec,
             top_k=settings.retrieval_top_k,
         )
@@ -151,7 +154,7 @@ async def answer(req: AnswerRequest) -> AnswerResponseModel:
     if not gate.passed:
         log.info(
             "answer.gate.fell_through",
-            broadcastId=req.broadcastId,
+            sessionId=req.sessionId,
             reason=gate.reason,
             top1=gate.top1,
         )
@@ -181,12 +184,12 @@ async def answer(req: AnswerRequest) -> AnswerResponseModel:
     # belt + suspenders): never let an "answerable=true" with no citations
     # leak through.
     if result.answerable and not citations_out:
-        log.warning("answer.no_citations_after_filter", broadcastId=req.broadcastId)
+        log.warning("answer.no_citations_after_filter", sessionId=req.sessionId)
         return AnswerResponseModel(answerable=False, citations=[], gate=gate_info)
 
     log.info(
         "answer.ok",
-        broadcastId=req.broadcastId,
+        sessionId=req.sessionId,
         answerable=result.answerable,
         confidence=result.confidence,
         citations=len(citations_out),

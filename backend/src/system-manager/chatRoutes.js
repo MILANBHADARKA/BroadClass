@@ -11,46 +11,46 @@ const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 50;
 
 /**
- * GET /api/chat/broadcasts/:broadcastId/messages
+ * GET /api/chat/sessions/:sessionId/messages
  *
- * Returns messages for a broadcast in chronological order, newest first.
+ * Returns messages for a session in chronological order, newest first.
  * Pagination: `cursor` (a message id) + `limit`. The client typically
  * loads the latest page, then if the user scrolls up, requests older
  * messages by passing the oldest id as `cursor`.
+ *
+ * Phase 8: scoped by sessionId, not broadcastId. Session → classroom
+ * lookup gates access via enrollment.
  *
  * Filters out HIDDEN_BY_MODERATION for non-teachers; teachers can see
  * everything for moderation review.
  */
 router.get(
-  '/broadcasts/:broadcastId/messages',
+  '/sessions/:sessionId/messages',
   verifyToken,
-  verifyClassroomAccess((req) => req.params.broadcastId),
+  resolveSessionAccess,
   async (req, res) => {
     try {
-      const { broadcastId } = req.params;
-      const { isTeacher } = req.userAccess;
+      const { sessionId } = req.params;
+      const { isTeacher } = req.sessionAccess;
       const limit = Math.max(
         1,
         Math.min(MAX_PAGE_SIZE, parseInt(req.query.limit, 10) || DEFAULT_PAGE_SIZE),
       );
       const cursor = req.query.cursor || null;
 
-      // Hidden-by-moderation messages are visible to teachers (so they can
-      // review/restore) but not to students. Hidden-by-teacher messages are
-      // hidden for everyone except the original author.
       const statusFilter = isTeacher
-        ? { not: 'HIDDEN_BY_TEACHER' }  // teacher sees everything except their own hides
+        ? { not: 'HIDDEN_BY_TEACHER' }
         : { in: ['VISIBLE', 'AWAITING_TEACHER', 'ANSWERED_BY_TEACHER'] };
 
       const where = {
-        broadcastId,
+        sessionId,                  // Phase 8 — primary scope
         status: statusFilter,
       };
 
       const messages = await prisma.chatMessage.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take: limit + 1,  // +1 lets us know if there's a next page
+        take: limit + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         include: {
           user: { select: { id: true, name: true, role: true } },
@@ -61,15 +61,9 @@ router.get(
       const hasMore = messages.length > limit;
       const page = hasMore ? messages.slice(0, limit) : messages;
       const nextCursor = hasMore ? page[page.length - 1].id : null;
-
-      // Reverse so the client gets oldest→newest within the page (most chat
-      // UIs render top-to-bottom that way).
       page.reverse();
 
-      // Hydrate AI_ANSWER citations: fetch all referenced TranscriptChunk
-      // rows in one query, then stitch back. Live messages already include
-      // these inline via the Redis fan-out path (chatSocketHandlers), but
-      // history loads need to re-join.
+      // Hydrate AI_ANSWER citations from TranscriptChunk in one query.
       const allChunkIds = new Set();
       for (const m of page) {
         if (m.role === 'AI_ANSWER' && Array.isArray(m.sourceChunkIds)) {
@@ -86,7 +80,7 @@ router.get(
       }
 
       res.json({
-        broadcastId,
+        sessionId,
         messages: page.map((m) => serializeMessage(m, chunkById)),
         nextCursor,
       });
@@ -98,7 +92,7 @@ router.get(
 );
 
 /**
- * GET /api/chat/broadcasts/:broadcastId/queue
+ * GET /api/chat/sessions/:sessionId/queue
  *
  * Teacher Q&A queue — questions that AI declined or the system fell through
  * to the broadcaster. Sorted by upvotes (descending) then by createdAt
@@ -108,21 +102,17 @@ router.get(
  * Teacher-only. Other users get 403.
  */
 router.get(
-  '/broadcasts/:broadcastId/queue',
+  '/sessions/:sessionId/queue',
   verifyToken,
-  verifyClassroomAccess((req) => req.params.broadcastId),
+  resolveSessionAccess,
   async (req, res) => {
     try {
-      if (!req.userAccess.isTeacher) {
+      if (!req.sessionAccess.isTeacher) {
         return res.status(403).json({ error: 'Teacher only' });
       }
-      const { broadcastId } = req.params;
-      // Fetch raw rows + upvote counts, then sort in app code (Prisma's
-      // orderBy can't easily do "count(upvotes) desc, createdAt asc"
-      // without a raw query and the row volume here is tiny anyway —
-      // a broadcast usually has < 50 pending questions).
+      const { sessionId } = req.params;
       const rows = await prisma.chatMessage.findMany({
-        where: { broadcastId, status: 'AWAITING_TEACHER' },
+        where: { sessionId, status: 'AWAITING_TEACHER' },
         include: {
           user: { select: { id: true, name: true, role: true } },
           _count: { select: { upvotes: true } },
@@ -134,7 +124,7 @@ router.get(
         return new Date(a.createdAt) - new Date(b.createdAt);
       });
       res.json({
-        broadcastId,
+        sessionId,
         queue: rows.map((m) => serializeMessage(m)),
       });
     } catch (err) {
@@ -166,7 +156,8 @@ router.post('/messages/:messageId/answer', verifyToken, async (req, res) => {
     const question = await prisma.chatMessage.findUnique({
       where: { id: messageId },
       select: {
-        id: true, broadcastId: true, classroomId: true, status: true, broadcastMs: true,
+        id: true, broadcastId: true, sessionId: true, classroomId: true,
+        status: true, broadcastMs: true,
       },
     });
     if (!question) return res.status(404).json({ error: 'Question not found' });
@@ -183,6 +174,7 @@ router.post('/messages/:messageId/answer', verifyToken, async (req, res) => {
       const answer = await tx.chatMessage.create({
         data: {
           broadcastId: question.broadcastId,
+          sessionId: question.sessionId,    // Phase 8 — inherit parent session
           classroomId: question.classroomId,
           userId: req.user.id,
           role: 'TEACHER_ANSWER',
@@ -198,7 +190,7 @@ router.post('/messages/:messageId/answer', verifyToken, async (req, res) => {
       const updatedQuestion = await tx.chatMessage.update({
         where: { id: question.id },
         data: { status: 'ANSWERED_BY_TEACHER' },
-        select: { id: true, broadcastId: true, status: true },
+        select: { id: true, broadcastId: true, sessionId: true, status: true },
       });
       return { answer, updatedQuestion };
     });
@@ -216,6 +208,7 @@ router.post('/messages/:messageId/answer', verifyToken, async (req, res) => {
           JSON.stringify({
             messageId: result.updatedQuestion.id,
             broadcastId: result.updatedQuestion.broadcastId,
+            sessionId: result.updatedQuestion.sessionId,    // Phase 8 — room routing key
             status: result.updatedQuestion.status,
             timestamp: Date.now(),
           }),
@@ -360,6 +353,7 @@ router.delete('/messages/:messageId', verifyToken, async (req, res) => {
         JSON.stringify({
           messageId: updated.id,
           broadcastId: updated.broadcastId,
+          sessionId: updated.sessionId,    // Phase 8 — room routing key
           status: updated.status,
           timestamp: Date.now(),
         }),
@@ -373,6 +367,159 @@ router.delete('/messages/:messageId', verifyToken, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/chat/classrooms/:classroomId/sessions
+ *
+ * "Past lectures" list — every BroadcastSession ever held in this
+ * classroom, newest first. Returns aggregate stats so the UI can render
+ * counts without N+1 fetches.
+ *
+ * Access: classroom teacher OR enrolled student.
+ */
+router.get(
+  '/classrooms/:classroomId/sessions',
+  verifyToken,
+  verifyClassroomAccess((req) => req.params.classroomId),
+  async (req, res) => {
+    try {
+      const { classroomId } = req.params;
+      const rows = await prisma.broadcastSession.findMany({
+        where: { classroomId },
+        orderBy: { startedAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          startedAt: true,
+          endedAt: true,
+          broadcaster: { select: { id: true, name: true } },
+          _count: {
+            select: {
+              messages: true,
+              chunks: true,
+              recordings: true,
+            },
+          },
+        },
+      });
+      res.json({
+        classroomId,
+        sessions: rows.map((s) => ({
+          id: s.id,
+          title: s.title || 'Untitled lecture',
+          startedAt: s.startedAt,
+          endedAt: s.endedAt,
+          broadcaster: s.broadcaster,
+          messageCount: s._count.messages,
+          chunkCount: s._count.chunks,
+          hasRecording: s._count.recordings > 0,
+        })),
+      });
+    } catch (err) {
+      log.error('Failed to list classroom sessions:', err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+/**
+ * PATCH /api/chat/sessions/:sessionId
+ * Body: { title?: string }
+ *
+ * Teacher-only — rename a past (or live) session.
+ */
+router.patch(
+  '/sessions/:sessionId',
+  verifyToken,
+  resolveSessionAccess,
+  async (req, res) => {
+    try {
+      if (!req.sessionAccess.isTeacher) {
+        return res.status(403).json({ error: 'Teacher only' });
+      }
+      const { title } = req.body || {};
+      if (typeof title !== 'string' || !title.trim()) {
+        return res.status(400).json({ error: 'title required' });
+      }
+      const trimmed = title.trim().slice(0, 200);
+      const updated = await prisma.broadcastSession.update({
+        where: { id: req.params.sessionId },
+        data: { title: trimmed },
+        select: { id: true, title: true },
+      });
+      res.json({ session: updated });
+    } catch (err) {
+      log.error('Failed to rename session:', err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+/**
+ * GET /api/chat/sessions/:sessionId/transcript
+ *
+ * Full transcript for a past (or current) session — concatenated chunks
+ * in chunkIndex order. Used by the Past Lectures replay drawer.
+ */
+router.get(
+  '/sessions/:sessionId/transcript',
+  verifyToken,
+  resolveSessionAccess,
+  async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const chunks = await prisma.transcriptChunk.findMany({
+        where: { sessionId },
+        orderBy: { chunkIndex: 'asc' },
+        select: { id: true, text: true, startMs: true, endMs: true, chunkIndex: true },
+      });
+      res.json({ sessionId, chunks });
+    } catch (err) {
+      log.error('Failed to fetch session transcript:', err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+/**
+ * GET /api/chat/sessions/:sessionId/stats
+ *
+ * Cheap counts that drive the cold-start banner UX in `useChat`:
+ *   - chunkCount     — number of TranscriptChunk rows for this session
+ *   - messageCount   — number of ChatMessage rows for this session
+ *   - anyAiAnswer    — true if at least one AI_ANSWER has been produced
+ *
+ * Three short COUNT queries; cheap enough that the frontend can re-fetch
+ * if it ever wants to (not required — the chat socket events are enough
+ * to flip `anyAiAnswer` live).
+ */
+router.get(
+  '/sessions/:sessionId/stats',
+  verifyToken,
+  resolveSessionAccess,
+  async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const [chunkCount, messageCount, anyAi] = await Promise.all([
+        prisma.transcriptChunk.count({ where: { sessionId } }),
+        prisma.chatMessage.count({ where: { sessionId } }),
+        prisma.chatMessage.findFirst({
+          where: { sessionId, role: 'AI_ANSWER' },
+          select: { id: true },
+        }),
+      ]);
+      res.json({
+        sessionId,
+        chunkCount,
+        messageCount,
+        anyAiAnswer: anyAi !== null,
+      });
+    } catch (err) {
+      log.error('Session stats failed:', err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
 /* ─── Helpers ──────────────────────────────────────────────────────── */
 
 /**
@@ -385,7 +532,7 @@ router.delete('/messages/:messageId', verifyToken, async (req, res) => {
 async function _teacherStatusChange({ req, messageId, newStatus }) {
   const message = await prisma.chatMessage.findUnique({
     where: { id: messageId },
-    select: { id: true, broadcastId: true, classroomId: true, status: true },
+    select: { id: true, broadcastId: true, sessionId: true, classroomId: true, status: true },
   });
   if (!message) return { error: 'Message not found', status: 404 };
 
@@ -400,7 +547,7 @@ async function _teacherStatusChange({ req, messageId, newStatus }) {
   const updated = await prisma.chatMessage.update({
     where: { id: messageId },
     data: { status: newStatus },
-    select: { id: true, broadcastId: true, status: true },
+    select: { id: true, broadcastId: true, sessionId: true, status: true },
   });
 
   const redisClient = req.app.locals.redisClient;
@@ -410,6 +557,7 @@ async function _teacherStatusChange({ req, messageId, newStatus }) {
       JSON.stringify({
         messageId: updated.id,
         broadcastId: updated.broadcastId,
+        sessionId: updated.sessionId,    // Phase 8 — room routing key
         status: updated.status,
         timestamp: Date.now(),
       }),
@@ -449,6 +597,7 @@ function serializeMessage(m, chunkById) {
   const out = {
     id: m.id,
     broadcastId: m.broadcastId,
+    sessionId: m.sessionId,       // Phase 8 — primary scope key on the wire
     classroomId: m.classroomId,
     role: m.role,
     content: m.content,
@@ -470,6 +619,55 @@ function serializeMessage(m, chunkById) {
       .map((c) => ({ id: c.id, startMs: c.startMs, endMs: c.endMs, text: c.text }));
   }
   return out;
+}
+
+/**
+ * Middleware: resolves :sessionId → classroom → user-access for session-
+ * scoped routes (Phase 8). Populates:
+ *   req.sessionAccess.session     – { id, classroomId, broadcasterId, ... }
+ *   req.sessionAccess.isTeacher   – classroom owner
+ *
+ * Use after `verifyToken`. Rejects with:
+ *   400 if :sessionId is missing
+ *   404 if the session doesn't exist
+ *   403 if the user isn't enrolled or the owning teacher
+ *   503 on DB error (fail closed)
+ */
+async function resolveSessionAccess(req, res, next) {
+  try {
+    const sessionId = req.params.sessionId;
+    if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+
+    const session = await prisma.broadcastSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true, classroomId: true, broadcasterId: true,
+        title: true, startedAt: true, endedAt: true,
+        classroom: { select: { teacherId: true } },
+      },
+    });
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    const isTeacher = session.classroom.teacherId === req.user.id;
+    if (!isTeacher) {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: {
+          classroomId_studentId: {
+            classroomId: session.classroomId,
+            studentId: req.user.id,
+          },
+        },
+        select: { id: true },
+      });
+      if (!enrollment) return res.status(403).json({ error: 'Access denied' });
+    }
+
+    req.sessionAccess = { session, isTeacher };
+    next();
+  } catch (err) {
+    log.error('resolveSessionAccess failed:', err.message);
+    return res.status(503).json({ error: 'Access check temporarily unavailable, please retry' });
+  }
 }
 
 export default router;

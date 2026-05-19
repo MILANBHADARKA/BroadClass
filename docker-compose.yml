@@ -96,7 +96,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-dev-broadcast-jwt-secret-change-in-production}
       - JWT_EXPIRES_IN=7d
       - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
-      # Shared internal-only key — system-manager uses it to call ai-service
+      # Shared internal-only key system-manager uses it to call ai-service
       # /moderate and /answer. Must match the value passed to ai-service and
       # origin (both also pick this up).
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-broadclass-internal-key-change-in-production}
@@ -125,7 +125,7 @@ services:
       - broadclass-network
 
   # AI Service (Smart Chat: live transcription + RAG)
-  # Phase 0: scaffold only — exposes /health and subscribes to transcription:control.
+  # Phase 0: scaffold only exposes /health and subscribes to transcription:control.
   # Phase 1+ adds Deepgram streaming STT, embeddings, and the /answer endpoint.
   ai-service:
     build:
@@ -148,7 +148,7 @@ services:
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      # Provider selection — set in .env to switch vendors without rebuilding.
+      # Provider selection set in .env to switch vendors without rebuilding.
       #   STT_PROVIDER:        deepgram
       #   EMBEDDING_PROVIDER:  sentence_transformers | openai
       #   ANSWER_PROVIDER:     groq | openai | anthropic

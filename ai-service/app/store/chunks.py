@@ -4,6 +4,10 @@ CRUD + similarity search for TranscriptChunk rows.
 The embedding column is pgvector(384). Vectors are passed as Python lists
 or numpy arrays; the pgvector codec (registered in db._init_connection)
 handles serialization.
+
+Phase 8: `sessionId` is the primary scoping key for all queries here.
+`broadcastId` remains on the row for media-plane traceability but isn't
+the hot query column anymore.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ async def insert_many(
     *,
     transcript_id: str,
     broadcast_id: str,
+    session_id: str,
     starting_index: int,
     items: Sequence[dict[str, Any]],
     embedding_version: str,
@@ -43,6 +48,7 @@ async def insert_many(
                 new_id,
                 transcript_id,
                 broadcast_id,
+                session_id,
                 starting_index + offset,
                 item["text"],
                 int(item["startMs"]),
@@ -58,11 +64,11 @@ async def insert_many(
             await conn.executemany(
                 """
                 INSERT INTO "TranscriptChunk" (
-                    "id", "transcriptId", "broadcastId", "chunkIndex",
+                    "id", "transcriptId", "broadcastId", "sessionId", "chunkIndex",
                     "text", "startMs", "endMs",
                     "embedding", "embeddingVersion", "speakerLabel"
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 """,
                 rows,
             )
@@ -71,15 +77,16 @@ async def insert_many(
 
 async def search_similar(
     *,
-    broadcast_id: str,
+    session_id: str,
     query_embedding: Sequence[float],
     top_k: int = 8,
 ) -> list[dict[str, Any]]:
     """
-    Cosine-similarity search restricted to a single broadcast's chunks.
+    Cosine-similarity search restricted to a single SESSION's chunks.
 
     Returns rows including a `cosine_similarity` field (1.0 - cosine_distance).
-    Uses the ivfflat index created in the migration.
+    Uses the ivfflat index on `embedding` and the `(sessionId)` filter
+    index for efficient session-scoped retrieval.
     """
     async with get_pool().acquire() as conn:
         rows = await conn.fetch(
@@ -89,21 +96,23 @@ async def search_similar(
                 "speakerLabel",
                 1 - ("embedding" <=> $1) AS "cosine_similarity"
             FROM "TranscriptChunk"
-            WHERE "broadcastId" = $2 AND "embedding" IS NOT NULL
+            WHERE "sessionId" = $2 AND "embedding" IS NOT NULL
             ORDER BY "embedding" <=> $1
             LIMIT $3
             """,
             list(query_embedding),
-            broadcast_id,
+            session_id,
             top_k,
         )
     return [dict(r) for r in rows]
 
 
-async def count_for_broadcast(broadcast_id: str) -> int:
+async def count_for_session(session_id: str) -> int:
+    """Return the number of chunks accumulated for a session — used by the
+    cold-start banner UX (Phase 8.6)."""
     async with get_pool().acquire() as conn:
         row = await conn.fetchrow(
-            'SELECT COUNT(*) AS n FROM "TranscriptChunk" WHERE "broadcastId" = $1',
-            broadcast_id,
+            'SELECT COUNT(*) AS n FROM "TranscriptChunk" WHERE "sessionId" = $1',
+            session_id,
         )
     return int(row["n"]) if row else 0

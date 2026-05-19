@@ -137,6 +137,7 @@ async def warm_up_embedding() -> None:
 class _Session:
     broadcast_id: str
     classroom_id: str
+    session_id: str  # Phase 8: scoping key for all writes/reads in this WS session
     started_at_monotonic: float
     transcript_id: str | None = None
     # Accumulated final-segment text awaiting chunking.
@@ -165,6 +166,7 @@ async def ingest(
     websocket: WebSocket,
     broadcast_id: str,
     classroomId: str = "",
+    sessionId: str = "",     # Phase 8 — Origin includes this in the WS query string
     sampleRate: int = 16000,
     channels: int = 1,
     x_internal_key: str | None = Header(default=None, alias="X-Internal-Key"),
@@ -178,11 +180,20 @@ async def ingest(
         log.warning("ingest.auth_failed", broadcastId=broadcast_id)
         return
 
+    # Phase 8: sessionId is mandatory now that the DB columns are NOT NULL.
+    # Origin always sends it; reject if missing rather than silently writing
+    # rows we'd then have to clean up.
+    if not sessionId:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        log.warning("ingest.missing_session", broadcastId=broadcast_id)
+        return
+
     await websocket.accept()
     log.info(
         "ingest.connected",
         broadcastId=broadcast_id,
         classroomId=classroomId,
+        sessionId=sessionId,
         sampleRate=sampleRate,
         channels=channels,
     )
@@ -190,6 +201,7 @@ async def ingest(
     session = _Session(
         broadcast_id=broadcast_id,
         classroom_id=classroomId or broadcast_id,
+        session_id=sessionId,
         started_at_monotonic=time.monotonic(),
     )
 
@@ -222,9 +234,12 @@ async def ingest(
     async def _publish_chunk(*, text: str, is_final: bool, start_ms: int, end_ms: int) -> None:
         # Phase 5: live transcript feed for the UI. Fire-and-forget; failing
         # to publish a chunk shouldn't break ingest.
+        # Phase 8: include sessionId so system-manager can route to
+        # `chat:${sessionId}` (the new session-scoped Socket.IO room).
         payload = {
             "broadcastId": broadcast_id,
             "classroomId": session.classroom_id,
+            "sessionId": session.session_id,
             "text": text,
             "isFinal": is_final,
             "startMs": start_ms,
@@ -262,6 +277,7 @@ async def ingest(
                     session.transcript_id = await transcripts_store.create(
                         classroom_id=session.classroom_id,
                         broadcast_id=session.broadcast_id,
+                        session_id=session.session_id,
                         language=evt.language,
                     )
                     log.info(
@@ -419,6 +435,7 @@ async def _flush(session: _Session, embedder: EmbeddingProvider, *, reason: str)
         inserted = await chunks_store.insert_many(
             transcript_id=session.transcript_id,
             broadcast_id=session.broadcast_id,
+            session_id=session.session_id,
             starting_index=session.next_chunk_index,
             items=items,
             embedding_version=embedder.version,

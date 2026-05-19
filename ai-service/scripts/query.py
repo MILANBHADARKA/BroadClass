@@ -3,16 +3,17 @@ CLI smoke-test for retrieval quality.
 
 Usage (inside the ai-service container or with the env set up):
 
-    python -m scripts.query <broadcastId> "your question here"
+    python -m scripts.query <sessionId> "your question here"
 
 Or:
 
-    python ai-service/scripts/query.py <broadcastId> "your question here"
+    python ai-service/scripts/query.py <sessionId> "your question here"
 
 Prints the top-K most-similar transcript chunks for the question, ordered
-by descending cosine similarity. Used during Phase 1 to verify the
+by descending cosine similarity. Used during Phase 1+ to verify the
 audio-tap → STT → embedding → DB pipeline is producing useful vectors
-before we wire up the chat path.
+before we wire up the chat path. Phase 8 changed the scope from
+broadcastId to sessionId — pass a BroadcastSession.id.
 
 Reads DATABASE_URL and EMBEDDING_MODEL_NAME from the environment (loads
 .env in the current directory if present).
@@ -42,8 +43,8 @@ from app.store import chunks as chunks_store  # noqa: E402
 
 
 async def main() -> int:
-    parser = argparse.ArgumentParser(description="Similarity query over a broadcast transcript.")
-    parser.add_argument("broadcast_id", help="The broadcast (room) ID whose transcript to query.")
+    parser = argparse.ArgumentParser(description="Similarity query over a session transcript.")
+    parser.add_argument("session_id", help="The BroadcastSession.id whose transcript to query.")
     parser.add_argument("question", help="The natural-language query.")
     parser.add_argument("-k", "--top-k", type=int, default=8, help="Number of chunks to return.")
     args = parser.parse_args()
@@ -64,14 +65,14 @@ async def main() -> int:
         embedder = SentenceTransformersEmbedding()
         [query_vec] = await embedder.embed([args.question])
         rows = await chunks_store.search_similar(
-            broadcast_id=args.broadcast_id,
+            session_id=args.session_id,
             query_embedding=query_vec,
             top_k=args.top_k,
         )
         if not rows:
-            print("(no chunks found — has the broadcast started transcribing?)")
+            print("(no chunks found — has the session started transcribing?)")
             return 1
-        print(f"Top {len(rows)} chunks for broadcastId={args.broadcast_id}:\n")
+        print(f"Top {len(rows)} chunks for sessionId={args.session_id}:\n")
         for i, row in enumerate(rows, start=1):
             sim = row["cosine_similarity"]
             start_s = row["startMs"] / 1000

@@ -87,7 +87,11 @@ export class OriginTranscriptionHandler {
         return;
       }
       if (event?.type === 'start') {
-        this.start({ broadcastId: event.broadcastId, classroomId: event.classroomId })
+        this.start({
+          broadcastId: event.broadcastId,
+          classroomId: event.classroomId,
+          sessionId: event.sessionId,            // Phase 8
+        })
           .catch((err) => log.error(`Failed to start transcription for ${event.broadcastId}:`, err));
       } else if (event?.type === 'stop') {
         this.stop(event.broadcastId).catch((err) =>
@@ -108,9 +112,13 @@ export class OriginTranscriptionHandler {
    * Idempotent: if a session is already active for this broadcast, returns
    * without doing anything.
    */
-  async start({ broadcastId, classroomId }) {
+  async start({ broadcastId, classroomId, sessionId }) {
     if (!broadcastId) {
       log.warn('transcription.start missing broadcastId');
+      return;
+    }
+    if (!sessionId) {
+      log.warn(`transcription.start missing sessionId for ${broadcastId} — Phase 8 requires it`);
       return;
     }
     if (this.sessions.has(broadcastId)) {
@@ -162,6 +170,7 @@ export class OriginTranscriptionHandler {
     const session = {
       broadcastId,
       classroomId,
+      sessionId,            // Phase 8 — passed to ai-service via WS query
       audioProducer,
       transport: null,
       consumer: null,
@@ -250,7 +259,7 @@ export class OriginTranscriptionHandler {
       // 4. Open WebSocket to ai-service /ingest. We open it BEFORE spawning
       //    FFmpeg so connection failures abort early rather than spilling
       //    audio frames into the void.
-      session.ws = await this._openIngestWebSocket(broadcastId, classroomId);
+      session.ws = await this._openIngestWebSocket(broadcastId, classroomId, sessionId);
 
       // 5. Spawn FFmpeg: SDP in, raw PCM out on stdout.
       //
@@ -457,12 +466,14 @@ export class OriginTranscriptionHandler {
    * timeout / handshake failure). The shared INTERNAL_API_KEY proves we're
    * a trusted internal service.
    */
-  _openIngestWebSocket(broadcastId, classroomId) {
+  _openIngestWebSocket(broadcastId, classroomId, sessionId) {
     return new Promise((resolve, reject) => {
       // Convert http://host:port → ws://host:port
       const wsBase = this.config.aiServiceUrl.replace(/^http/, 'ws');
       const url = `${wsBase}/ingest/${encodeURIComponent(broadcastId)}` +
         `?classroomId=${encodeURIComponent(classroomId || '')}` +
+        // Phase 8: ai-service rejects /ingest connections without sessionId now.
+        `&sessionId=${encodeURIComponent(sessionId || '')}` +
         `&sampleRate=${PCM_SAMPLE_RATE_HZ}&channels=${PCM_CHANNELS}`;
 
       const ws = new WebSocket(url, {

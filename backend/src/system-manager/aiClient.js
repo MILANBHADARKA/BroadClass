@@ -98,11 +98,11 @@ export async function moderateMessage(content) {
  *   { answerable: bool, answer: string|null, citations: [...], confidence: 'high'|'low', gate: {...} }
  *   or null on failure / breaker open.
  */
-export async function answerQuestion({ broadcastId, content }) {
+export async function answerQuestion({ sessionId, content }) {
   try {
     return await _post(
       '/answer',
-      { broadcastId, content },
+      { sessionId, content },     // Phase 8 — ai-service /answer keys on sessionId
       { timeoutMs: ANSWER_TIMEOUT_MS },
     );
   } catch (err) {

@@ -31,6 +31,10 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
         const stored = await redisClient.getBroadcast(roomId);
         return {
           roomId,
+          // Phase 8: sessionId scopes chat/transcript/RAG to this specific
+          // lecture instance. Frontend keys its hooks on this so a new
+          // lecture in the same classroom doesn't show old chat.
+          sessionId: b.sessionId ?? null,
           viewerCount: stored?.viewerCount ?? 0,
           hasVideo: b.producers.has('video'),
           hasAudio: b.producers.has('audio'),
@@ -38,6 +42,14 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
       }),
     );
     return list;
+  }
+
+  /** Default lecture title for a freshly created session. Teachers can rename
+   *  later through the Past Lectures UI. */
+  function defaultLectureTitle() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `Lecture · ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   /** Cleanup a broadcast and all its resources */
@@ -74,13 +86,29 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
     broadcasts.delete(roomId);
     await redisClient.endBroadcast(roomId);
 
+    // Phase 8: mark the session as ended so it surfaces in Past Lectures.
+    if (broadcast.sessionId) {
+      try {
+        await prisma.broadcastSession.update({
+          where: { id: broadcast.sessionId },
+          data: { endedAt: new Date() },
+        });
+      } catch (err) {
+        log.warn(`Failed to set endedAt on session ${broadcast.sessionId}:`, err.message);
+      }
+    }
+
     log.info(`Broadcast cleaned up: ${roomId}`);
-    io.emit('broadcastEnded', { roomId });
+    io.emit('broadcastEnded', { roomId, sessionId: broadcast.sessionId });
     io.emit('broadcastList', await getBroadcastList());
 
     // Publish to System-Manager via Redis
     try {
-      await redisClient.publish('broadcast:list-updated', JSON.stringify({ action: 'ended', roomId }));
+      await redisClient.publish('broadcast:list-updated', JSON.stringify({
+        action: 'ended',
+        roomId,
+        sessionId: broadcast.sessionId,
+      }));
     } catch (err) {
       log.warn('Failed to publish broadcast update to Redis:', err.message);
     }
@@ -141,6 +169,16 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
             if (!grace) {
               return cb({ error: `Room "${roomId}" already has a broadcaster` });
             }
+
+            // Phase 8: decide whether this reconnect continues the same
+            // lecture session or starts a fresh one. If the disconnect
+            // happened while the teacher had real producers running, the
+            // reconnect is "I refreshed mid-lecture" → keep sessionId.
+            // If producers were already empty at disconnect, the previous
+            // session was effectively dead → mint a new sessionId so we
+            // don't accidentally stitch two unrelated lectures together.
+            const hadProducersAtDisconnect = (grace.savedResources?.producers?.length ?? 0) > 0;
+
             // Teacher reconnecting — cancel grace timer, reset broadcast state for fresh pipe
             clearTimeout(grace.timer);
             broadcasterGraceTimers.delete(roomId);
@@ -152,7 +190,25 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
             broadcast.producers.clear();
             broadcast.piped = false;
             broadcast.broadcasterId = socket.id;
-            log.info(`Teacher reconnected to ${roomId} with new socket ${socket.id}, ready for re-broadcast`);
+
+            if (!hadProducersAtDisconnect) {
+              // Start a new session row for this reconnect.
+              try {
+                const newSession = await prisma.broadcastSession.create({
+                  data: {
+                    classroomId: roomId,
+                    broadcasterId: socket.user.id,
+                    title: defaultLectureTitle(),
+                  },
+                });
+                broadcast.sessionId = newSession.id;
+                log.info(`Teacher reconnected to ${roomId} (new session ${newSession.id} — previous was idle)`);
+              } catch (err) {
+                log.error(`Failed to create BroadcastSession on reconnect for ${roomId}:`, err.message);
+              }
+            } else {
+              log.info(`Teacher reconnected to ${roomId} with new socket ${socket.id} (session ${broadcast.sessionId} preserved)`);
+            }
           }
 
           if (!broadcast) {
@@ -167,11 +223,34 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
               edgeServers: [],
               pipeTimer: null,
               piped: false,
+              sessionId: null,       // Phase 8 — filled in below
               createdAt: Date.now(),
             };
             broadcasts.set(roomId, broadcast);
             log.info(`Broadcast created: ${roomId}`);
-            
+
+            // Phase 8: create the BroadcastSession row now. Subsequent code
+            // paths (transcription:control, broadcastList, recording start)
+            // all read broadcast.sessionId, so this must complete before we
+            // proceed. Failure means we can't start session-scoped state —
+            // bail out cleanly.
+            try {
+              const session = await prisma.broadcastSession.create({
+                data: {
+                  classroomId: roomId,
+                  broadcasterId: socket.user.id,
+                  title: defaultLectureTitle(),
+                },
+              });
+              broadcast.sessionId = session.id;
+              log.info(`BroadcastSession ${session.id} started for ${roomId}`);
+            } catch (err) {
+              log.error(`Failed to create BroadcastSession for ${roomId}:`, err.message);
+              broadcasts.delete(roomId);
+              try { router.close(); } catch (_) {}
+              return cb({ error: 'Failed to initialize lecture session, please retry' });
+            }
+
             // Register with recording handler for capture
             if (recordingHandler) {
               recordingHandler.registerBroadcastRoom(roomId, broadcast);
@@ -335,6 +414,7 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
             await redisClient.publish('broadcast:list-updated', JSON.stringify({
               action: 'created',
               roomId,
+              sessionId: broadcast.sessionId,
               teacherId: socket.user?.id,
               startedAt: broadcast.createdAt,
             }));
@@ -364,7 +444,12 @@ export function registerOriginSocketHandlers({ io, config, redisClient, broadcas
           if (transcriptionEnabled) {
             redisClient.publish(
               CHANNEL_TRANSCRIPTION_CONTROL,
-              JSON.stringify({ type: 'start', broadcastId: roomId, classroomId: roomId }),
+              JSON.stringify({
+                type: 'start',
+                broadcastId: roomId,
+                classroomId: roomId,
+                sessionId: broadcast.sessionId,   // Phase 8
+              }),
             ).catch((err) =>
               log.warn(`Failed to publish transcription:start for ${roomId}:`, err.message));
           } else {

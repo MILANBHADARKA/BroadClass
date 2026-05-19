@@ -60,9 +60,11 @@ export function registerChatSocketHandlers({ io, redisClient }) {
           log.warn(`Malformed pubsub payload on ${channel}`);
           return;
         }
-        const broadcastId = data.broadcastId;
-        if (!broadcastId) return;
-        const room = `chat:${broadcastId}`;
+        // Phase 8: route by sessionId, not broadcastId. Payloads without
+        // sessionId are pre-Phase-8 strays and get dropped.
+        const sessionId = data.sessionId;
+        if (!sessionId) return;
+        const room = `chat:${sessionId}`;
 
         if (channel === CHANNEL_CHAT_MESSAGE) {
           io.to(room).emit('chat:message', data);
@@ -90,29 +92,29 @@ export function registerChatSocketHandlers({ io, redisClient }) {
       return;
     }
 
-    socket.on('chat:join-room', async ({ broadcastId }, ack) => {
-      if (!broadcastId) {
-        return ack?.({ error: 'broadcastId required' });
+    socket.on('chat:join-room', async ({ sessionId }, ack) => {
+      if (!sessionId) {
+        return ack?.({ error: 'sessionId required' });
       }
-      // In this app broadcastId === classroomId.
-      const access = await _getAccess(broadcastId, socket.user);
+      // Resolve session → classroom, then check enrollment for that classroom.
+      const access = await _getSessionAccess(sessionId, socket.user);
       if (!access) {
         return ack?.({ error: 'Access denied' });
       }
-      socket.join(`chat:${broadcastId}`);
-      log.debug(`Socket ${socket.id} joined chat:${broadcastId}`);
+      socket.join(`chat:${sessionId}`);
+      log.debug(`Socket ${socket.id} joined chat:${sessionId}`);
       ack?.({ ok: true, isTeacher: access.isTeacher });
     });
 
-    socket.on('chat:leave-room', ({ broadcastId }) => {
-      if (!broadcastId) return;
-      socket.leave(`chat:${broadcastId}`);
+    socket.on('chat:leave-room', ({ sessionId }) => {
+      if (!sessionId) return;
+      socket.leave(`chat:${sessionId}`);
     });
 
-    socket.on('chat:send', async ({ broadcastId, content, parentId, broadcastMs }, ack) => {
+    socket.on('chat:send', async ({ sessionId, content, parentId, broadcastMs }, ack) => {
       try {
-        if (!broadcastId || typeof content !== 'string') {
-          return ack?.({ error: 'broadcastId and content required' });
+        if (!sessionId || typeof content !== 'string') {
+          return ack?.({ error: 'sessionId and content required' });
         }
         const trimmed = content.trim();
         if (!trimmed) {
@@ -131,8 +133,8 @@ export function registerChatSocketHandlers({ io, redisClient }) {
         }
 
         // Access check — re-verified per send to handle role changes
-        // mid-session.
-        const access = await _getAccess(broadcastId, socket.user);
+        // mid-session. Resolves session → classroom → enrollment.
+        const access = await _getSessionAccess(sessionId, socket.user);
         if (!access) {
           return ack?.({ error: 'Access denied' });
         }
@@ -155,11 +157,13 @@ export function registerChatSocketHandlers({ io, redisClient }) {
           log.warn('moderation check failed (allowing):', err.message);
         }
 
-        // Persist.
+        // Persist. Phase 8: tag with sessionId so chat history / RAG /
+        // pubsub fan-out can scope to this specific lecture instance.
         const created = await prisma.chatMessage.create({
           data: {
-            broadcastId,
-            classroomId: broadcastId,    // app convention: roomId === classroomId
+            broadcastId: access.classroomId,   // mediasoup roomId = classroomId by app convention
+            sessionId,                          // Phase 8 — primary scope
+            classroomId: access.classroomId,
             userId: socket.user.id,
             role: 'VIEWER_QUESTION',
             content: trimmed,
@@ -177,6 +181,7 @@ export function registerChatSocketHandlers({ io, redisClient }) {
         const wire = {
           id: created.id,
           broadcastId: created.broadcastId,
+          sessionId: created.sessionId,
           classroomId: created.classroomId,
           role: created.role,
           content: created.content,
@@ -267,7 +272,7 @@ async function _runAiPipeline({ redisClient, question }) {
  */
 async function _handleAiAnswer({ redisClient, question }) {
   const result = await answerQuestion({
-    broadcastId: question.broadcastId,
+    sessionId: question.sessionId,    // Phase 8 — RAG scope
     content: question.content,
   });
 
@@ -290,6 +295,7 @@ async function _handleAiAnswer({ redisClient, question }) {
     const created = await prisma.chatMessage.create({
       data: {
         broadcastId: question.broadcastId,
+        sessionId: question.sessionId,    // Phase 8 — inherits the question's session
         classroomId: question.classroomId,
         userId: question.user.id,        // attribute to the asker for FK safety;
                                           // role=AI_ANSWER disambiguates in the UI
@@ -306,6 +312,7 @@ async function _handleAiAnswer({ redisClient, question }) {
     const wire = {
       id: created.id,
       broadcastId: created.broadcastId,
+      sessionId: created.sessionId,
       classroomId: created.classroomId,
       role: created.role,
       content: created.content,
@@ -346,13 +353,14 @@ async function _markAwaitingTeacher({ redisClient, question }) {
     const updated = await prisma.chatMessage.update({
       where: { id: question.id },
       data: { status: 'AWAITING_TEACHER' },
-      select: { id: true, broadcastId: true, status: true },
+      select: { id: true, broadcastId: true, sessionId: true, status: true },
     });
     await redisClient.publish(
       CHANNEL_CHAT_STATUS,
       JSON.stringify({
         messageId: updated.id,
         broadcastId: updated.broadcastId,
+        sessionId: updated.sessionId,    // Phase 8 — for room routing in subscribers
         status: updated.status,
         timestamp: Date.now(),
       }),
@@ -363,7 +371,39 @@ async function _markAwaitingTeacher({ redisClient, question }) {
 }
 
 /**
+ * Resolve a session → classroom → user-access. Returns
+ *   { isTeacher, classroomId }    on success
+ *   null                          on missing session / no access
+ *
+ * This is the Phase 8 replacement for `_getAccess(classroomId, ...)` — chat
+ * operations key on sessionId now, so we look the classroom up via the
+ * BroadcastSession row to enforce enrollment.
+ */
+async function _getSessionAccess(sessionId, user) {
+  try {
+    const session = await prisma.broadcastSession.findUnique({
+      where: { id: sessionId },
+      select: { classroomId: true, classroom: { select: { teacherId: true } } },
+    });
+    if (!session) return null;
+    const classroomId = session.classroomId;
+    if (session.classroom.teacherId === user.id) {
+      return { isTeacher: true, classroomId };
+    }
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { classroomId_studentId: { classroomId, studentId: user.id } },
+      select: { id: true },
+    });
+    return enrollment ? { isTeacher: false, classroomId } : null;
+  } catch (err) {
+    log.error('_getSessionAccess failed:', err.message);
+    return null;
+  }
+}
+
+/**
  * Resolve a user's relationship to a classroom (= broadcastId in this app).
+ * Kept for any non-session-scoped call sites; not used on the hot send path.
  */
 async function _getAccess(classroomId, user) {
   try {
