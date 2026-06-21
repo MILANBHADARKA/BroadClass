@@ -52,7 +52,7 @@ export default function LoginPage() {
           </h1>
           
           <p className="text-xl text-text-secondary max-w-md leading-relaxed mb-12">
-            Connect teachers and students in real-time with HD video streamin and recorded lectures.
+            Connect teachers and students in real-time with HD video streaming, recorded lectures and smart AI chat bot.
           </p>
         </div>
       </div>

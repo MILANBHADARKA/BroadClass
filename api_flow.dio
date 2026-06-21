@@ -1,238 +1,316 @@
 <mxfile host="65bd71144e">
     <diagram id="api-flow" name="API Flow Diagram">
-        <mxGraphModel dx="1023" dy="626" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+        <mxGraphModel dx="1023" dy="626" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1500" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
+
                 <mxCell id="title" value="BroadClass API Flow Diagram" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#333333;" parent="1" vertex="1">
-                    <mxGeometry x="550" y="20" width="400" height="40" as="geometry"/>
+                    <mxGeometry x="700" y="15" width="500" height="35" as="geometry"/>
                 </mxCell>
+                <mxCell id="subtitle" value="REST + Socket.IO + WebSocket flows across System Manager, Origin, and AI Service" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=2;fontColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="48" width="700" height="20" as="geometry"/>
+                </mxCell>
+
+                <!-- Columns -->
                 <mxCell id="clientBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;strokeWidth=2;" parent="1" vertex="1">
-                    <mxGeometry x="40" y="80" width="200" height="1080" as="geometry"/>
+                    <mxGeometry x="40" y="80" width="200" height="1380" as="geometry"/>
                 </mxCell>
                 <mxCell id="clientLabel" value="React Frontend" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#2E7D32;" parent="1" vertex="1">
                     <mxGeometry x="80" y="90" width="120" height="25" as="geometry"/>
                 </mxCell>
+
                 <mxCell id="sysManagerBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7C4DFF;strokeWidth=2;" parent="1" vertex="1">
-                    <mxGeometry x="300" y="80" width="400" height="1080" as="geometry"/>
+                    <mxGeometry x="290" y="80" width="430" height="1380" as="geometry"/>
                 </mxCell>
                 <mxCell id="sysManagerLabel" value="System Manager (Port 3000)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#5E35B1;" parent="1" vertex="1">
-                    <mxGeometry x="390" y="90" width="220" height="25" as="geometry"/>
+                    <mxGeometry x="380" y="90" width="250" height="25" as="geometry"/>
                 </mxCell>
+
                 <mxCell id="originBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#FF5722;strokeWidth=2;" parent="1" vertex="1">
-                    <mxGeometry x="760" y="80" width="400" height="1080" as="geometry"/>
+                    <mxGeometry x="770" y="80" width="400" height="1380" as="geometry"/>
                 </mxCell>
                 <mxCell id="originLabel" value="Origin Server (Port 3001)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#E64A19;" parent="1" vertex="1">
-                    <mxGeometry x="860" y="90" width="200" height="25" as="geometry"/>
+                    <mxGeometry x="870" y="90" width="200" height="25" as="geometry"/>
                 </mxCell>
+
+                <!-- AI Service column (NEW) -->
+                <mxCell id="aiBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE4FF;strokeColor=#6E35E5;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="1220" y="80" width="380" height="1380" as="geometry"/>
+                </mxCell>
+                <mxCell id="aiLabel" value="AI Service (Port 8080 — Python/FastAPI)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#4527A0;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="90" width="300" height="25" as="geometry"/>
+                </mxCell>
+
                 <mxCell id="storageBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#9C27B0;strokeWidth=2;" parent="1" vertex="1">
-                    <mxGeometry x="1220" y="80" width="280" height="1080" as="geometry"/>
+                    <mxGeometry x="1650" y="80" width="320" height="1380" as="geometry"/>
                 </mxCell>
                 <mxCell id="storageLabel" value="Storage Layer" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#7B1FA2;" parent="1" vertex="1">
-                    <mxGeometry x="1300" y="90" width="120" height="25" as="geometry"/>
+                    <mxGeometry x="1740" y="90" width="140" height="25" as="geometry"/>
                 </mxCell>
+
+                <!-- =================== AUTH =================== -->
                 <mxCell id="authSection" value="Authentication APIs" style="text;html=1;strokeColor=none;fillColor=#BBDEFB;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="310" y="130" width="380" height="25" as="geometry"/>
+                    <mxGeometry x="300" y="125" width="410" height="22" as="geometry"/>
                 </mxCell>
                 <mxCell id="authRoutes" value="POST /api/auth/register&#xa;POST /api/auth/login&#xa;POST /api/auth/logout&#xa;GET /api/auth/me" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2196F3;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="320" y="160" width="180" height="80" as="geometry"/>
+                    <mxGeometry x="310" y="155" width="200" height="75" as="geometry"/>
                 </mxCell>
                 <mxCell id="authFlow1" value="Register/Login" style="endArrow=classic;html=1;strokeColor=#2196F3;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="140" y="180" as="sourcePoint"/>
-                        <mxPoint x="320" y="180" as="targetPoint"/>
+                        <mxPoint x="140" y="175" as="sourcePoint"/>
+                        <mxPoint x="310" y="175" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="authFlow2" value="JWT Token" style="endArrow=classic;html=1;strokeColor=#2196F3;strokeWidth=2;dashed=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="320" y="200" as="sourcePoint"/>
+                        <mxPoint x="310" y="200" as="sourcePoint"/>
                         <mxPoint x="140" y="200" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="authDb" value="PostgreSQL&#xa;(Users table)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#42A5F5;strokeColor=#1976D2;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1280" y="150" width="100" height="60" as="geometry"/>
+                <mxCell id="authDb" value="PostgreSQL&#xa;(Users)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#42A5F5;strokeColor=#1976D2;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1720" y="145" width="100" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="authDbFlow" value="Create/Read User" style="endArrow=classic;html=1;strokeColor=#1976D2;strokeWidth=1;startArrow=classic;startFill=1;" parent="1" source="authRoutes" target="authDb" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="690" y="200" as="sourcePoint"/>
-                        <mxPoint x="1220" y="200" as="targetPoint"/>
-                    </mxGeometry>
+                <mxCell id="authDbFlow" value="Create/Read" style="endArrow=classic;html=1;strokeColor=#1976D2;strokeWidth=1;startArrow=classic;startFill=1;" parent="1" source="authRoutes" target="authDb" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
                 </mxCell>
+
+                <!-- =================== CLASSROOM =================== -->
                 <mxCell id="classSection" value="Classroom APIs" style="text;html=1;strokeColor=none;fillColor=#C8E6C9;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="310" y="260" width="380" height="25" as="geometry"/>
+                    <mxGeometry x="300" y="245" width="410" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="classRoutes" value="GET /api/classrooms (list)&#xa;POST /api/classrooms (create)&#xa;GET /api/classrooms/:id&#xa;PUT /api/classrooms/:id&#xa;DELETE /api/classrooms/:id&#xa;POST /api/classrooms/join&#xa;POST /api/classrooms/:id/leave" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4CAF50;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="320" y="290" width="200" height="120" as="geometry"/>
+                <mxCell id="classRoutes" value="GET    /api/classrooms (list)&#xa;POST   /api/classrooms (create)&#xa;GET    /api/classrooms/:id&#xa;PATCH  /api/classrooms/:id&#xa;DELETE /api/classrooms/:id&#xa;POST   /api/classrooms/join&#xa;POST   /api/classrooms/:id/leave&#xa;&#xa;PATCH on :id can toggle&#xa;aiChatEnabled / transcriptionEnabled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4CAF50;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="275" width="280" height="170" as="geometry"/>
                 </mxCell>
-                <mxCell id="classFlow1" value="CRUD Operations" style="endArrow=classic;html=1;strokeColor=#4CAF50;strokeWidth=2;" parent="1" edge="1">
+                <mxCell id="classFlow1" value="CRUD" style="endArrow=classic;html=1;strokeColor=#4CAF50;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="140" y="330" as="sourcePoint"/>
-                        <mxPoint x="320" y="330" as="targetPoint"/>
+                        <mxPoint x="140" y="320" as="sourcePoint"/>
+                        <mxPoint x="310" y="320" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="classFlow2" value="Classroom data" style="endArrow=classic;html=1;strokeColor=#4CAF50;strokeWidth=2;dashed=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="320" y="370" as="sourcePoint"/>
+                        <mxPoint x="310" y="370" as="sourcePoint"/>
                         <mxPoint x="140" y="370" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="classDb" value="PostgreSQL&#xa;(Classrooms,&#xa;Enrollments)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#42A5F5;strokeColor=#1976D2;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1280" y="290" width="100" height="70" as="geometry"/>
+                    <mxGeometry x="1720" y="285" width="100" height="70" as="geometry"/>
                 </mxCell>
                 <mxCell id="classDbFlow" value="CRUD" style="endArrow=classic;html=1;strokeColor=#1976D2;strokeWidth=1;startArrow=classic;startFill=1;" parent="1" source="classRoutes" target="classDb" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="690" y="350" as="sourcePoint"/>
-                        <mxPoint x="1220" y="350" as="targetPoint"/>
-                    </mxGeometry>
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="broadcastSection" value="Broadcast APIs" style="text;html=1;strokeColor=none;fillColor=#FFCCBC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="310" y="430" width="380" height="25" as="geometry"/>
+
+                <!-- =================== BROADCAST =================== -->
+                <mxCell id="broadcastSection" value="Broadcast / Edge APIs" style="text;html=1;strokeColor=none;fillColor=#FFCCBC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="465" width="410" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="broadcastRoutes" value="GET /api/best-edge?roomId=xxx&#xa;(Returns optimal edge server)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF5722;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="320" y="460" width="200" height="50" as="geometry"/>
+                <mxCell id="broadcastRoutes" value="GET /api/best-edge?roomId=…&#xa;(Returns optimal edge server)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF5722;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="495" width="240" height="50" as="geometry"/>
                 </mxCell>
                 <mxCell id="broadcastFlow1" value="Get best edge" style="endArrow=classic;html=1;strokeColor=#FF5722;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="140" y="480" as="sourcePoint"/>
-                        <mxPoint x="320" y="480" as="targetPoint"/>
+                        <mxPoint x="140" y="515" as="sourcePoint"/>
+                        <mxPoint x="310" y="515" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="broadcastFlow2" value="Edge URL" style="endArrow=classic;html=1;strokeColor=#FF5722;strokeWidth=2;dashed=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="320" y="500" as="sourcePoint"/>
-                        <mxPoint x="140" y="500" as="targetPoint"/>
+                        <mxPoint x="310" y="535" as="sourcePoint"/>
+                        <mxPoint x="140" y="535" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="redis" value="Redis&#xa;(Edge Registry)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF6B6B;strokeColor=#C92A2A;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1280" y="440" width="100" height="50" as="geometry"/>
+                <mxCell id="redis" value="Redis&#xa;(Edge registry,&#xa;Chat fanout,&#xa;Pub/Sub)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF6B6B;strokeColor=#C92A2A;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1720" y="475" width="120" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="broadcastRedis" value="Get edges" style="endArrow=classic;html=1;strokeColor=#FF6B6B;strokeWidth=1;startArrow=classic;startFill=1;" parent="1" source="broadcastRoutes" target="redis" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="690" y="485" as="sourcePoint"/>
-                        <mxPoint x="1220" y="485" as="targetPoint"/>
-                    </mxGeometry>
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
                 </mxCell>
+
+                <!-- =================== RECORDING =================== -->
                 <mxCell id="recSection" value="Recording APIs" style="text;html=1;strokeColor=none;fillColor=#F8BBD9;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="310" y="530" width="380" height="25" as="geometry"/>
+                    <mxGeometry x="300" y="575" width="410" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="recRoutes" value="POST /api/recordings/start&#xa;POST /api/recordings/:id/stop&#xa;GET /api/recordings/classroom/:id&#xa;GET /api/recordings/:id&#xa;DELETE /api/recordings/:id&#xa;GET /api/recordings/:id/download&#xa;PATCH /api/recordings/:id/accessibility" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E91E63;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="320" y="560" width="230" height="120" as="geometry"/>
+                <mxCell id="recRoutes" value="POST   /api/recordings/start&#xa;POST   /api/recordings/:id/stop&#xa;GET    /api/recordings/classrooms/:id&#xa;GET    /api/recordings/:id&#xa;DELETE /api/recordings/:id&#xa;GET    /api/recordings/:id/download&#xa;PATCH  /api/recordings/:id/accessibility" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E91E63;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="605" width="260" height="125" as="geometry"/>
                 </mxCell>
-                <mxCell id="recFlow1" value="Start/Stop recording" style="endArrow=classic;html=1;strokeColor=#E91E63;strokeWidth=2;" parent="1" edge="1">
+                <mxCell id="recFlow1" value="Start/Stop" style="endArrow=classic;html=1;strokeColor=#E91E63;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="140" y="590" as="sourcePoint"/>
-                        <mxPoint x="320" y="590" as="targetPoint"/>
+                        <mxPoint x="140" y="635" as="sourcePoint"/>
+                        <mxPoint x="310" y="635" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="recFlow2" value="Recording data" style="endArrow=classic;html=1;strokeColor=#E91E63;strokeWidth=2;dashed=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="320" y="640" as="sourcePoint"/>
-                        <mxPoint x="140" y="640" as="targetPoint"/>
+                        <mxPoint x="310" y="690" as="sourcePoint"/>
+                        <mxPoint x="140" y="690" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="recDb" value="PostgreSQL&#xa;(Recordings)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#42A5F5;strokeColor=#1976D2;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1280" y="530" width="100" height="60" as="geometry"/>
+                    <mxGeometry x="1720" y="595" width="100" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="recDbFlow" value="Metadata" style="endArrow=classic;html=1;strokeColor=#1976D2;strokeWidth=1;startArrow=classic;startFill=1;" parent="1" source="recRoutes" target="recDb" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="recRedisFlow" value="Pub/Sub recording:start/stop" style="endArrow=classic;html=1;strokeColor=#FF6B6B;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="690" y="590" as="sourcePoint"/>
-                        <mxPoint x="1220" y="590" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="860" y="520"/>
-                        </Array>
+                        <mxPoint x="570" y="660" as="sourcePoint"/>
+                        <mxPoint x="770" y="660" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="recRedisFlow" value="Pub/Sub events" style="endArrow=classic;html=1;strokeColor=#FF6B6B;strokeWidth=1;" parent="1" edge="1">
+                <mxCell id="originRec" value="Origin Recording Handler&#xa;Subscribe recording:start →&#xa;1. PlainTransport (UDP)&#xa;2. Consumers (video/audio)&#xa;3. Spawn FFmpeg → WebM&#xa;4. Multipart upload → S3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF5722;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="615" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3" value="AWS S3&#xa;(Recordings)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#FF9800;strokeColor=#F57C00;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1720" y="675" width="100" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3Flow" value="Upload" style="endArrow=classic;html=1;strokeColor=#F57C00;strokeWidth=1;" parent="1" source="originRec" target="s3" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- =================== SMART CHAT REST (NEW) =================== -->
+                <mxCell id="chatSection" value="Smart Chat REST APIs (Phase 8 — session-scoped)" style="text;html=1;strokeColor=none;fillColor=#D1C4E9;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;fontColor=#4527A0;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="765" width="410" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="chatRoutes" value="Session-scoped reads/writes:&#xa;GET  /api/chat/sessions/:sid/messages&#xa;GET  /api/chat/sessions/:sid/queue        (teacher)&#xa;GET  /api/chat/sessions/:sid/stats        (cold-start)&#xa;GET  /api/chat/sessions/:sid/transcript&#xa;PATCH /api/chat/sessions/:sid             (rename)&#xa;&#xa;Classroom-scoped:&#xa;GET  /api/chat/classrooms/:cid/sessions  (Past Lectures)&#xa;&#xa;Message actions:&#xa;POST   /api/chat/messages/:mid/answer        (teacher)&#xa;POST   /api/chat/messages/:mid/dismiss        (teacher)&#xa;POST   /api/chat/messages/:mid/mark-answered (teacher)&#xa;POST   /api/chat/messages/:mid/upvote&#xa;DELETE /api/chat/messages/:mid                 (teacher)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6E35E5;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="795" width="350" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="chatFlow1" value="REST" style="endArrow=classic;html=1;strokeColor=#6E35E5;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="550" y="620" as="sourcePoint"/>
-                        <mxPoint x="760" y="620" as="targetPoint"/>
+                        <mxPoint x="140" y="900" as="sourcePoint"/>
+                        <mxPoint x="310" y="900" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="recRedisLabel" value="recording:start/stop" style="text;html=1;strokeColor=none;fillColor=#FFE0E0;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;" parent="1" vertex="1">
-                    <mxGeometry x="600" y="591" width="120" height="18" as="geometry"/>
-                </mxCell>
-                <mxCell id="originRecSection" value="Recording Handler" style="text;html=1;strokeColor=none;fillColor=#FFCCBC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="560" width="360" height="20" as="geometry"/>
-                </mxCell>
-                <mxCell id="originRec" value="Subscribe: recording:start&#xa;1. Create PlainTransport (UDP)&#xa;2. Create Consumers (video/audio)&#xa;3. Spawn FFmpeg process&#xa;4. Stream RTP to FFmpeg&#xa;5. Upload chunks to S3&#xa;&#xa;Subscribe: recording:stop&#xa;1. Stop FFmpeg gracefully&#xa;2. Complete multipart upload&#xa;3. Update DB via callback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF5722;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="600" width="200" height="180" as="geometry"/>
-                </mxCell>
-                <mxCell id="s3" value="AWS S3&#xa;(Video files)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#FF9800;strokeColor=#F57C00;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1280" y="630" width="100" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="s3Flow" value="Upload chunks" style="endArrow=classic;html=1;strokeColor=#F57C00;strokeWidth=1;" parent="1" source="originRec" target="s3" edge="1">
+                <mxCell id="chatFlow2" value="JSON" style="endArrow=classic;html=1;strokeColor=#6E35E5;strokeWidth=2;dashed=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="990" y="670" as="sourcePoint"/>
-                        <mxPoint x="1220" y="670" as="targetPoint"/>
+                        <mxPoint x="310" y="930" as="sourcePoint"/>
+                        <mxPoint x="140" y="930" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
+                <mxCell id="chatDb" value="PostgreSQL&#xa;BroadcastSession&#xa;Transcript&#xa;TranscriptChunk&#xa;ChatMessage" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#7E57C2;strokeColor=#5E35B1;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1700" y="775" width="140" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="chatDbFlow" value="Prisma" style="endArrow=classic;html=1;strokeColor=#5E35B1;strokeWidth=1;startArrow=classic;startFill=1;" parent="1" source="chatRoutes" target="chatDb" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- =================== AI SERVICE APIS (NEW) =================== -->
+                <mxCell id="aiHttpSection" value="AI Service HTTP APIs" style="text;html=1;strokeColor=none;fillColor=#D1C4E9;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;fontColor=#4527A0;" parent="1" vertex="1">
+                    <mxGeometry x="1230" y="125" width="360" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="aiHttpRoutes" value="GET  /health&#xa;POST /moderate&#xa;       { sessionId, content }&#xa;       → { allow, flags[], categories[] }&#xa;&#xa;POST /answer&#xa;       { sessionId, content, broadcastMs? }&#xa;       → { status, answer, citations[],&#xa;             confidence, sourceChunkIds[] }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6E35E5;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="155" width="350" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="aiHttpFlow1" value="HTTP (internal API key auth)" style="endArrow=classic;html=1;strokeColor=#6E35E5;strokeWidth=2;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="715" y="225" as="sourcePoint"/>
+                        <mxPoint x="1240" y="225" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="aiHttpFlow2" value="JSON" style="endArrow=classic;html=1;strokeColor=#6E35E5;strokeWidth=2;dashed=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1240" y="265" as="sourcePoint"/>
+                        <mxPoint x="715" y="265" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+
+                <!-- AI Service WS endpoint -->
+                <mxCell id="aiWsSection" value="AI Service WebSocket" style="text;html=1;strokeColor=none;fillColor=#D1C4E9;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;fontColor=#4527A0;" parent="1" vertex="1">
+                    <mxGeometry x="1230" y="350" width="360" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="aiWsRoutes" value="WS /ingest/:broadcastId?classroomId=…&amp;sessionId=…&#xa;       ← binary PCM s16le 16 kHz mono (from Origin/FFmpeg)&#xa;       — Pipes audio to STT provider (Deepgram)&#xa;       — Chunks text · creates Transcript + TranscriptChunk&#xa;       — Embeds via sentence-transformers/OpenAI (384-d)&#xa;       — Publishes transcription:chunk on Redis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6E35E5;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="380" width="350" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="aiWsFlow" value="Origin → AI Service: PCM stream" style="endArrow=classic;html=1;strokeColor=#6E35E5;strokeWidth=3;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1170" y="420" as="sourcePoint"/>
+                        <mxPoint x="1240" y="420" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+
+                <!-- AI → external providers + Postgres -->
+                <mxCell id="aiProvNote" value="Outbound calls (provider-dispatched):&#xa;Deepgram STT · Groq / OpenAI / Anthropic LLM · OpenAI moderation&#xa;Embeddings — local in-process (sentence-transformers) or OpenAI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE4FF;strokeColor=#6E35E5;align=left;spacingLeft=10;fontSize=10;fontStyle=2;fontColor=#4527A0;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="515" width="350" height="80" as="geometry"/>
+                </mxCell>
+
+                <mxCell id="aiPg" value="PostgreSQL&#xa;asyncpg + pgvector&#xa;(similarity search)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#7E57C2;strokeColor=#5E35B1;fontColor=#FFFFFF;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1700" y="445" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="aiPgFlow" value="vector search" style="endArrow=classic;html=1;strokeColor=#5E35B1;strokeWidth=1;startArrow=classic;startFill=1;" parent="1" source="aiWsRoutes" target="aiPg" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+
+                <mxCell id="aiRedis" value="" style="endArrow=classic;html=1;strokeColor=#FF6B6B;strokeWidth=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1590" y="555" as="sourcePoint"/>
+                        <mxPoint x="1720" y="555" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="aiRedisLabel" value="publish transcription:chunk" style="text;html=1;strokeColor=none;fillColor=#FFE0E0;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="1600" y="540" width="170" height="18" as="geometry"/>
+                </mxCell>
+
+                <!-- =================== SOCKET.IO =================== -->
                 <mxCell id="socketSection" value="Socket.IO Events (Real-time)" style="text;html=1;strokeColor=none;fillColor=#E1BEE7;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="310" y="700" width="380" height="25" as="geometry"/>
+                    <mxGeometry x="300" y="1055" width="410" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="socketSys" value="System Manager Socket.IO:&#xa;- broadcast:started&#xa;- broadcast:ended&#xa;- recording:started&#xa;- recording:stopped&#xa;- recording:progress&#xa;- viewer:count" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9C27B0;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="320" y="730" width="180" height="120" as="geometry"/>
+                <mxCell id="socketSys" value="System Manager Socket.IO:&#xa;&#xa;Server → Client:&#xa;- broadcast:started / :ended&#xa;- recording:started / :stopped&#xa;- recording:progress&#xa;- viewer:count&#xa;- chat:message&#xa;- chat:status-update&#xa;- transcription:chunk&#xa;&#xa;Client → Server:&#xa;- chat:join-room { sessionId }&#xa;- chat:leave-room { sessionId }&#xa;- chat:send { sessionId, content }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9C27B0;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="1085" width="350" height="260" as="geometry"/>
                 </mxCell>
-                <mxCell id="socketOrigin" value="Origin Server Socket.IO:&#xa;- getRouterRtpCapabilities&#xa;- createWebRtcTransport&#xa;- connectTransport&#xa;- startBroadcast&#xa;- stopBroadcast&#xa;- joinBroadcast&#xa;- consume" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF5722;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="790" width="180" height="140" as="geometry"/>
+                <mxCell id="socketOrigin" value="Origin Server Socket.IO (WebRTC signaling):&#xa;- getRouterRtpCapabilities&#xa;- createWebRtcTransport&#xa;- connectTransport&#xa;- startBroadcast / stopBroadcast&#xa;- joinBroadcast / consume&#xa;- transcription:control (start/stop)&#xa;- viewerCount" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF5722;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="1085" width="350" height="160" as="geometry"/>
                 </mxCell>
-                <mxCell id="socketFlow1" value="Connect" style="endArrow=classic;html=1;strokeColor=#9C27B0;strokeWidth=2;" parent="1" edge="1">
+                <mxCell id="socketFlow1" value="Connect (auth via JWT)" style="endArrow=classic;html=1;strokeColor=#9C27B0;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="140" y="760" as="sourcePoint"/>
-                        <mxPoint x="320" y="760" as="targetPoint"/>
+                        <mxPoint x="140" y="1115" as="sourcePoint"/>
+                        <mxPoint x="310" y="1115" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="socketFlow2" value="Events" style="endArrow=classic;html=1;strokeColor=#9C27B0;strokeWidth=2;dashed=1;startArrow=classic;startFill=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="320" y="800" as="sourcePoint"/>
-                        <mxPoint x="140" y="800" as="targetPoint"/>
+                        <mxPoint x="310" y="1155" as="sourcePoint"/>
+                        <mxPoint x="140" y="1155" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="socketFlow3" value="WebRTC signaling" style="endArrow=classic;html=1;strokeColor=#FF5722;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="140" y="870" as="sourcePoint"/>
-                        <mxPoint x="780" y="870" as="targetPoint"/>
+                        <mxPoint x="140" y="1195" as="sourcePoint"/>
+                        <mxPoint x="780" y="1195" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="socketFlow4" value="Media params" style="endArrow=classic;html=1;strokeColor=#FF5722;strokeWidth=2;dashed=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="780" y="900" as="sourcePoint"/>
-                        <mxPoint x="140" y="900" as="targetPoint"/>
+                        <mxPoint x="780" y="1225" as="sourcePoint"/>
+                        <mxPoint x="140" y="1225" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="edgeSection" value="Edge Server APIs" style="text;html=1;strokeColor=none;fillColor=#FFE0B2;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="950" width="360" height="20" as="geometry"/>
+
+                <!-- Redis fanout note -->
+                <mxCell id="redisFanout" value="Socket.IO uses the Redis adapter for cross-instance fanout. chat:&lt;sessionId&gt; rooms scope chat to a single lecture." style="text;html=1;strokeColor=#FF6B6B;fillColor=#FFE0E0;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontStyle=2;fontColor=#C92A2A;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="1355" width="350" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="edgeRoutes" value="POST /api/internal/edges/register&#xa;POST /api/internal/edges/:id/heartbeat&#xa;DELETE /api/internal/edges/:id&#xa;GET /health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF9800;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="975" width="220" height="80" as="geometry"/>
+
+                <!-- =================== INTERNAL APIS =================== -->
+                <mxCell id="edgeSection" value="Edge Server Internal APIs" style="text;html=1;strokeColor=none;fillColor=#FFE0B2;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="1265" width="360" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeRoutes" value="POST   /api/internal/edges/register&#xa;POST   /api/internal/edges/:id/heartbeat&#xa;DELETE /api/internal/edges/:id&#xa;POST   /api/internal/recording/callback&#xa;GET    /health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF9800;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="790" y="1295" width="280" height="100" as="geometry"/>
                 </mxCell>
                 <mxCell id="edgeRedisFlow" value="Update registry" style="endArrow=classic;html=1;strokeColor=#FF6B6B;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="1000" y="1010" as="sourcePoint"/>
-                        <mxPoint x="1280" y="465" as="targetPoint"/>
+                        <mxPoint x="1070" y="1350" as="sourcePoint"/>
+                        <mxPoint x="1720" y="495" as="targetPoint"/>
                         <Array as="points">
-                            <mxPoint x="1200" y="1010"/>
-                            <mxPoint x="1200" y="465"/>
+                            <mxPoint x="1620" y="1350"/>
+                            <mxPoint x="1620" y="495"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="internalSection" value="Internal APIs (Origin)" style="text;html=1;strokeColor=none;fillColor=#FFCCBC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="1070" width="360" height="20" as="geometry"/>
-                </mxCell>
-                <mxCell id="internalRoutes" value="POST /api/internal/recording/callback&#xa;(Update recording status after upload)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FF5722;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="1095" width="220" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="internalDbFlow" value="Update status" style="endArrow=classic;html=1;strokeColor=#1976D2;strokeWidth=1;" parent="1" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="1000" y="1120" as="sourcePoint"/>
-                        <mxPoint x="1280" y="570" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="1230" y="1120"/>
-                            <mxPoint x="1230" y="570"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="authNote" value="All APIs except /auth require&#xa;JWT token in Authorization header&#xa;or HttpOnly cookie" style="text;html=1;strokeColor=none;fillColor=#FFF9C4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="550" y="320" width="150" height="50" as="geometry"/>
+
+                <!-- Auth + provider note -->
+                <mxCell id="authNote" value="All APIs except /auth require JWT (Authorization header or HttpOnly cookie).&#xa;Internal Origin↔AI / Origin↔System-Manager calls use INTERNAL_API_KEY.&#xa;AI Service provider selection is env-driven (STT_PROVIDER, ANSWER_PROVIDER, …)." style="text;html=1;strokeColor=none;fillColor=#FFF9C4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="710" y="425" width="450" height="55" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

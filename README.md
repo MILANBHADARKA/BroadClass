@@ -1,502 +1,358 @@
 # BroadClass
 
-**BroadClass** is a scalable, real-time live broadcasting and online classroom platform. It leverages WebRTC for low-latency streaming, an Edge-Origin architecture for handling high volumes of concurrent viewers, and cloud-native integrations for seamless recording and archiving.
+A live classroom platform with low-latency WebRTC streaming and a built-in AI tutor.
 
-[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-Images%20Available-blue?logo=docker)](https://hub.docker.com/u/milanbhadarka)
+Teachers go live, students join from anywhere, and an AI listens to the lecture in real time so students can ask questions and get answers grounded in what the teacher just said with citations back to the exact moment in the transcript. Anything the AI can't confidently answer falls through to the teacher's question queue.
 
 
 ## Table of Contents
 
-- [Features](#-features)
-- [Architecture](#️-architecture)
-- [Tech Stack](#-tech-stack)
-- [Prerequisites](#-prerequisites)
-- [Quick Start](#-quick-start)
-  - [Option A: Using Pre-built Docker Images](#option-a-using-pre-built-docker-images-recommended)
-  - [Option B: Building from Source](#option-b-building-from-source)
-- [Frontend Setup](#-frontend-setup)
-- [Configuration](#️-configuration)
-- [Recording Pipeline](#-recording-pipeline)
-- [Scaling](#-scaling)
-- [Troubleshooting](#-troubleshooting)
+- [What it does](#what-it-does)
+- [How it's built](#how-its-built)
+- [Tech stack](#tech-stack)
+- [What you'll need](#what-youll-need)
+- [Frontend setup](#frontend-setup)
+- [Smart Chat picking your AI providers](#smart-chat--picking-your-ai-providers)
+- [Configuration](#configuration)
+- [How recording works](#how-recording-works)
+- [Scaling notes](#scaling-notes)
+- [Troubleshooting](#troubleshooting)
 
 
-## Features
+## What it does
 
-- **Real-Time Broadcasting:** Ultra low-latency video and audio streaming using Mediasoup (WebRTC)
-- **Scalable Architecture:** Origin-Edge topology that scales horizontally to support thousands of concurrent viewers
-- **Role-Based Access Control:** Secure authentication and authorization differentiating between Teachers (Broadcasters) and Students (Viewers)
-- **Live Recording & Archiving:** On-the-fly stream interception and trans-muxing via FFmpeg, with direct multipart uploads to AWS S3
-- **Recording Access Control:** Teachers can set recording visibility (Private, Classroom)
-- **Picture-in-Picture Mode:** Broadcasters can share screen with camera overlay
-- **Cloud-Ready:** Containerized with Docker and Docker Compose, utilizing Redis for real-time Pub/Sub coordination
-- **Recording Library:** Dedicated panel for instructors to manage, publish, and review past broadcast recordings
+### Live classroom
+- **Real-time broadcasting** - sub-second video and audio over WebRTC (mediasoup SFU)
+- **Edge-Origin architecture** - origin captures the stream, edges fan it out so thousands of viewers can watch without bottlenecking
+- **Roles** - teachers create classrooms and broadcast; students join with a 6-character code
+- **Picture-in-Picture** - share your screen with your webcam in the corner; the stream keeps updating even if you minimise the browser
+- **Recordings** - broadcasts can be recorded to S3 and replayed later, with per-recording access control
+
+### Smart Chat (the AI part)
+- **Live transcription** - every lecture is transcribed in real time
+- **Cited answers** - students ask a question, the AI searches what's been said so far, and answers with clickable timestamps that jump back to the source
+- **Tutor-style replies** - the AI paraphrases and elaborates instead of just quoting; it never contradicts what the teacher actually said
+- **Cold-start banner** - at the start of a new lecture there's not enough transcript yet, so questions go straight to the teacher with a friendly explanation
+- **Teacher Q&A queue** - questions the AI can't answer (low confidence, no matching transcript) line up for the teacher, sorted by upvotes
+- **Each lecture is isolated** - Lecture 2 doesn't pull context from Lecture 1, even in the same classroom
+- **Past Lectures** - browse every prior lecture with a read-only transcript + chat replay
+- **Pluggable providers** - swap Deepgram, Groq, OpenAI, or Anthropic via env vars; no code changes
 
 
-## Architecture
+## How it's built
 
-The system consists of three primary backend node types alongside a responsive React frontend:
+There are four backend services and a React frontend:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (React + Vite)                  │
-│                  WebRTC + Socket.IO Client                  │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-              ┌──────────┼──────────┐
-              ▼          ▼          ▼
-      ┌──────────┐  ┌──────────┐  ┌──────────┐
-      │  System  │  │  Origin  │  │   Edge   │
-      │ Manager  │  │  Server  │  │  Server  │
-      │  :3000   │  │  :3001   │  │ :3002-04 │
-      └────┬─────┘  └────┬─────┘  └────┬─────┘
-           │             │              │
-           └─────────────┼──────────────┘
-                         ▼
-              ┌──────────────────────┐
-              │   Redis (Upstash)    │  ← Pub/Sub + Coordination
-              └──────────────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                ▼
-  ┌──────────┐    ┌──────────┐    ┌──────────┐
-  │PostgreSQL│    │   AWS S3 │    │  FFmpeg  │
-  │   (RDS)  │    │(Recordings)│   │(Recording)│
-  └──────────┘    └──────────┘    └──────────┘
+┌──────────────────────────────────────────────────────────┐
+│                React Frontend (Vite + Tailwind)          │
+└─────────────────────────┬────────────────────────────────┘
+                          │
+       ┌──────────────────┼──────────────────┬─────────────────┐
+       ▼                  ▼                  ▼                 ▼
+┌────────────┐    ┌────────────┐    ┌─────────────┐    ┌──────────────┐
+│   System   │    │   Origin   │    │    Edge     │    │  AI Service  │
+│  Manager   │    │   Server   │    │   Servers   │    │   (FastAPI)  │
+│   :3000    │    │   :3001    │    │  :3002-04   │    │    :8080     │
+└──────┬─────┘    └──────┬─────┘    └──────┬──────┘    └──────┬───────┘
+       │                 │                 │                  │
+       └─────────────────┼─────────────────┼──────────────────┘
+                         ▼                                    │
+              ┌────────────────────┐                          │
+              │   Redis (Pub/Sub)  │                          │
+              └────────────────────┘                          │
+                         │                                    │
+         ┌───────────────┼─────────────────┐                  ▼
+         ▼               ▼                 ▼          ┌─────────────────┐
+   ┌──────────┐   ┌──────────┐      ┌──────────┐     │  External AI    │
+   │PostgreSQL│   │  AWS S3  │      │  FFmpeg  │     │  Deepgram, Groq │
+   │+pgvector │   │(records) │      │(rec+STT) │     │  OpenAI, Claude │
+   └──────────┘   └──────────┘      └──────────┘     └─────────────────┘
 ```
 
-### Components:
+- **System Manager** (`:3000`) - REST APIs, authentication, classroom management, chat gateway, edge load balancing. Owns the Postgres connection.
+- **Origin** (`:3001`) - The mediasoup SFU. Captures the teacher's stream and forks it to FFmpeg for recording and to the AI service for transcription.
+- **Edge servers** (`:3002–3004`) - Relay nodes that distribute the stream to students.
+- **AI Service** (`:8080`, Python/FastAPI) - Owns the RAG pipeline: transcription, chunking, embeddings, vector search, answering, moderation.
 
-- **System Manager** (:3000): Handles HTTP APIs, user authentication, role verification, database transactions (Prisma), and triggers cross-service events via Redis Pub/Sub
-- **Origin Server** (:3001): Core WebRTC media server. Handles publisher streams and manages stream capture pipeline for recording directly to AWS S3
-- **Edge Servers** (:3002-3004): Globally distributable relay nodes that consume from Origin and serve WebRTC streams to viewers, offloading media processing and bandwidth
-
-
-## Tech Stack
-
-### Frontend
-- **React.js** (Vite) - Modern UI framework
-- **WebRTC** & Mediasoup Client - Real-time video/audio
-- **Socket.IO Client** - Real-time signaling
-- **Tailwind CSS v4** - Styling
-- **React Router** - Navigation
-
-### Backend
-- **Node.js** & Express - Server framework
-- **Mediasoup** - WebRTC media server (SFU)
-- **Prisma ORM** - Database management
-- **Redis** - Pub/Sub & real-time signaling
-- **FFmpeg** - Media processing & recording
-- **AWS SDK** - S3 for video storage
-- **Socket.IO** - Real-time communication
-
-### Infrastructure
-- **Docker** & Docker Compose - Containerization
-- **PostgreSQL** (AWS RDS) - Database
-- **Redis** (Upstash) - Cache & Pub/Sub
-- **AWS S3** - Recording storage
-
-
-## Prerequisites
-
-### Required Services
-- **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop/))
-- **PostgreSQL Database** (AWS RDS, Supabase, or local)
-- **Redis** (Upstash recommended for cloud, or local)
-- **AWS S3 Bucket** (for recordings)
-- **Node.js 18+** (for frontend development)
-
-### AWS Setup
-1. Create S3 bucket for recordings
-2. Create IAM user with S3 write permissions
-3. Note down Access Key ID and Secret Access Key
-
-### Upstash Redis Setup
-1. Sign up at [Upstash](https://upstash.com)
-2. Create new Redis database
-3. Copy the Redis URL (starts with `rediss://`)
-
-
-##  Quick Start
-
-Choose one of two deployment options:
-
----
-
-### Option A: Using Pre-built Docker Images (Recommended)
-
-**Best for:** Quick deployment, production, testing on multiple machines
-
-
-#### Step 1: Download Required Files
-
-```bash
-# Create deployment directory
-mkdir broadclass-deployment
-cd broadclass-deployment
-
-Add the following files:
-- `docker-compose.hub.yml`
-- `.env.example`
-From the repository
+### The Smart Chat data flow
+```
+ Teacher mic → Origin → FFmpeg PCM → WS → AI Service
+                                          │
+                                          ├─► Deepgram (transcription)
+                                          ├─► Embed each chunk
+                                          ▼
+                                  Postgres + pgvector
+                                  (scoped per lecture)
+                                          ▲
+                                          │
+ Student question → System Manager → AI → search → LLM → answer with citations
+                                                   │
+                                                   ▼
+                                       Live chat fanout via Redis
 ```
 
-#### Step 2: Configure Environment
 
-```bash
-# Copy template to .env
-cp .env.example .env
+## Tech stack
 
-# Edit with your credentials
-notepad .env
-```
+**Frontend** - React, Vite, Tailwind v4, Socket.IO client, mediasoup-client.
 
-#### Step 3: Pull and Start Services
+**Node backends** - Express, mediasoup, Socket.IO (Redis adapter), Prisma, FFmpeg, AWS SDK v3.
 
-```bash
-# Pull pre-built images from Docker Hub
-docker-compose -f docker-compose.hub.yml pull
+**Python AI service** - FastAPI, Deepgram SDK, Groq / OpenAI / Anthropic SDKs, sentence-transformers (`all-MiniLM-L6-v2`, 384-d), asyncpg + pgvector.
 
-# Start all services
-docker-compose -f docker-compose.hub.yml up -d
-
-# Check status
-docker-compose -f docker-compose.hub.yml ps
-```
-
-#### Step 4: Verify Services
-
-```bash
-# Check health endpoints
-http://localhost:3000/health  # System Manager
-http://localhost:3001/health  # Origin Server
-http://localhost:3002/health  # Edge Server 1
-http://localhost:3003/health  # Edge Server 2
-http://localhost:3004/health  # Edge Server 3
-
-# All should return: {"status":"healthy"}
-```
-
-#### Step 5: View Logs
-
-```bash
-# View all logs
-docker-compose -f docker-compose.hub.yml logs -f
-
-# View specific service
-docker logs broadclass-origin
-```
-
-**Proceed to [Frontend Setup](#-frontend-setup)**
-
----
-
-### Option B: Building from Source
-
-**Best for:** Development, customization, contributing
+**Infra** - Docker Compose, PostgreSQL + pgvector, Redis (Upstash works great), AWS S3.
 
 
-#### Step 1: Clone Repository
+## What you'll need
 
-```bash
-# Clone the repository
-git clone https://github.com/MILANBHADARKA/BroadClass.git
-cd BroadClass
-```
+Before you start:
 
-#### Step 2: Configure Environment
+- **Docker Desktop** ([download](https://www.docker.com/products/docker-desktop/))
+- **Node.js 18+** (for running the frontend dev server)
+- **PostgreSQL 15+ with `pgvector`** - Supabase and Neon ship it enabled. For self-hosted Postgres install [pgvector](https://github.com/pgvector/pgvector) and run `CREATE EXTENSION IF NOT EXISTS vector;`
+- **Redis** - Upstash is the easy cloud option, or run one locally
+- **AWS S3 bucket** - needed for recordings; any IAM user with `PutObject` + `GetObject` works
+- **At least one AI provider API key** - you only need keys for the providers you actually turn on:
 
-```bash
-# Copy template to .env
-cp .env.example .env
+| Provider | When you need it | Get a key |
+|---|---|---|
+| Deepgram | Live transcription (default) | [console.deepgram.com](https://console.deepgram.com/) |
+| Groq | Default LLM + moderation | [console.groq.com](https://console.groq.com/) |
+| OpenAI | Optional - answers / embeddings / moderation | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Anthropic | Optional - Claude for answers | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
 
-# Edit with your credentials
-notepad .env
-```
-
-Fill in the same environment variables as Option A (see above).
-
-#### Step 3: Build Docker Images
-
-```bash
-# Build all images
-docker-compose build
-
-# Or build specific services
-docker-compose build system-manager
-docker-compose build origin-server
-docker-compose build edge-server-1
-```
-
-**What happens:**
-- Installs Node.js dependencies
-- Compiles Mediasoup native modules
-- Installs FFmpeg (Origin only)
-- Creates optimized production images
-- **System Manager:**
-- **Origin Server:**
-- **Edge Servers:**
-
-#### Step 4: Start Services
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Check status
-docker-compose ps
-
-# View logs
-docker-compose logs -f
-```
-
-**Proceed to [Frontend Setup](#-frontend-setup)**
+With the defaults, you only need a Deepgram key and a Groq key - both have generous free tiers.
 
 
-## Frontend Setup
-
-### Step 1: Navigate to Frontend Directory
+## Frontend setup
 
 ```bash
 cd frontend
-```
-
-### Step 2: Install Dependencies
-
-```bash
 npm install
-```
-
-### Step 3: Configure Environment
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit if needed
-notepad .env
-```
-
-**Default Frontend Environment:**
-```env
-VITE_MANAGER_URL=http://localhost:3000
-VITE_ORIGIN_URL=http://localhost:3001
-```
-
-### Step 4: Start Development Server
-
-```bash
+cp .env.example .env   # defaults are fine for local dev
 npm run dev
 ```
 
-**Expected Output:**
+You should see:
 ```
-  VITE v7.3.0  ready in 388 ms
-
+  VITE v7.x  ready
   ➜  Local:   http://localhost:5173/
-  ➜  Network: http://192.168.1.x:5173/
 ```
 
-### Step 5: Access Application
+Open <http://localhost:5173>.
 
-Open your browser and navigate to:
+### Try it end-to-end
+
+**As a teacher**
+1. Register with role = Teacher
+2. Create a classroom (Smart Chat and Live Transcription are on by default)
+3. Click **Start Broadcast** and allow camera + microphone
+4. Talk for about a minute and a half so the transcript builds up
+5. Share the 6-character classroom code
+
+**As a student** (open an incognito window)
+1. Register with role = Student, join with the code
+2. Ask something about what the teacher just said - the AI replies with a confidence meter and clickable citation chips
+3. Ask something the lecture hasn't covered - it routes to the teacher's queue
+
+**Stop the broadcast** - the session shows up in the **Past Lectures** panel with a read-only transcript and chat replay.
+
+
+## Smart Chat - picking your AI providers
+
+The AI service is built around four interchangeable provider slots. You wire them up with environment variables and restart `ai-service`.
+
+The defaults are:
+```env
+STT_PROVIDER=deepgram
+EMBEDDING_PROVIDER=sentence_transformers   # runs locally, no API key
+ANSWER_PROVIDER=groq
+MODERATION_PROVIDER=groq
 ```
-http://localhost:5173
+
+### Want to use OpenAI for everything?
+```env
+EMBEDDING_PROVIDER=openai
+ANSWER_PROVIDER=openai
+MODERATION_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+```
+(STT stays on Deepgram - OpenAI doesn't have a real-time STT API for our use case.)
+
+### Want Claude for answers but keep Groq for moderation?
+```env
+ANSWER_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### Step 6: Create Test Accounts
+Then `docker compose restart ai-service` and you're done.
 
-1. **Register as Teacher:**
-   - Click "Register"
-   - Select "Teacher" role
-   - Fill in credentials
-   - Login
+### Why the AI sometimes refuses to answer
+On purpose. The pipeline is conservative:
+- **Moderation** filters abusive or unsafe questions first.
+- **Retrieval gate** - if no transcript chunks match the question well enough, the AI doesn't guess. It routes to the teacher's queue instead.
+- **Confidence meter** - every AI reply shows how confident it was, plus clickable citations back to the exact spot in the transcript.
 
-2. **Register as Student:**
-   - Open incognito/private window
-   - Register with "Student" role
-   - Login
-
-### Step 7: Test Broadcasting
-
-**As Teacher:**
-1. Click "Create Classroom"
-2. Fill in classroom details
-3. Click "Start Broadcast"
-4. Allow camera/microphone permissions
-5. Share classroom code with students
-
-**As Student:**
-1. Click "Join Classroom"
-2. Enter classroom code
-3. View live broadcast
-
+If you'd rather see the AI try harder, you can lower the retrieval threshold in `ai-service/app/config.py` - but expect more hallucinations.
 
 
 ## Configuration
 
-### Backend Configuration
+All backend services read from a single root `.env` file. The frontend has its own.
 
-All backend services use environment variables from `.env` file:
+### Backend - core settings
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
-| `REDIS_URL` | Redis connection string | `rediss://default:pass@host:6379` |
-| `JWT_SECRET` | Secret for JWT token signing | Min 32 characters |
-| `INTERNAL_API_KEY` | Key for inter-service auth | Random string |
-| `S3_BUCKET` | AWS S3 bucket name | `broadclass-recordings` |
-| `S3_REGION` | AWS region | `ap-south-1` |
-| `S3_ACCESS_KEY` | AWS access key | `AKIA...` |
-| `S3_SECRET_KEY` | AWS secret key | `...` |
-| `FRONTEND_ORIGIN` | Frontend URL (CORS) | `http://localhost:5173` |
-| `ANNOUNCED_IP` | Public IP for WebRTC | `127.0.0.1` or public IP |
-| `LOG_LEVEL` | Logging level | `info`, `debug`, `warn` |
+| Variable | What it does | Example |
+|---|---|---|
+| `DATABASE_URL` | Postgres connection (must have pgvector) | `postgresql://user:pass@host:5432/db` |
+| `REDIS_URL` | Redis connection | `rediss://default:pass@host:6379` |
+| `JWT_SECRET` | Signs auth tokens (use 32+ random characters) | `<random string>` |
+| `INTERNAL_API_KEY` | Auth for inter-service calls | `<random string>` |
+| `FRONTEND_ORIGIN` | Your frontend URL, used for CORS | `http://localhost:5173` |
+| `NODE_ENV` | `development` or `production` | `development` |
+| `DISABLE_RATE_LIMIT` | Skip the API rate limiter in dev | `true` |
+| `LOG_LEVEL` | `debug` / `info` / `warn` / `error` | `info` |
 
-### Frontend Configuration
+### Backend - S3 (recordings)
 
-Frontend uses Vite environment variables:
+| Variable | Example |
+|---|---|
+| `S3_BUCKET` | `broadclass-recordings` |
+| `S3_REGION` | `ap-south-1` |
+| `S3_ACCESS_KEY` | `AKIA...` |
+| `S3_SECRET_KEY` | `...` |
+| `S3_PREFIX` | `recordings` (optional) |
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_MANAGER_URL` | System Manager API URL | `http://localhost:3000` |
-| `VITE_ORIGIN_URL` | Origin Server URL | `http://localhost:3001` |
+### Backend - WebRTC
 
----
+| Variable | What it does | Example |
+|---|---|---|
+| `ANNOUNCED_IP` | The IP your edges advertise to viewers | `127.0.0.1` (local) or your public IP |
 
-## Recording Pipeline
+### Backend - AI Service
 
-BroadClass features a highly optimized recording pipeline:
+| Variable | Default | Notes |
+|---|---|---|
+| `AI_SERVICE_INTERNAL_URL` | `http://ai-service:8080` | Where System Manager finds the AI service |
+| `STT_PROVIDER` | `deepgram` | Only `deepgram` is supported today |
+| `EMBEDDING_PROVIDER` | `sentence_transformers` | Or `openai` |
+| `ANSWER_PROVIDER` | `groq` | Or `openai` / `anthropic` |
+| `MODERATION_PROVIDER` | `groq` | Or `openai` |
+| `DEEPGRAM_API_KEY` | - | Needed for default STT |
+| `GROQ_API_KEY` | - | Needed for default LLM + moderation |
+| `OPENAI_API_KEY` | - | Only if you flip a provider to `openai` |
+| `ANTHROPIC_API_KEY` | - | Only if `ANSWER_PROVIDER=anthropic` |
+
+See `.env.example` for the full list including model overrides.
+
+### Frontend
+
+| Variable | Default |
+|---|---|
+| `VITE_MANAGER_URL` | `http://localhost:3000` |
+| `VITE_ORIGIN_URL` | `http://localhost:3001` |
+
+
+## How recording works
 
 ```
-┌──────────────┐
-│   Teacher    │
-│ Starts Rec.  │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────────┐
-│ System Manager   │ ← Creates DB record
-│ Publishes Event  │ → Redis: recording:start
-└──────────────────┘
-       │
-       ▼
-┌──────────────────┐
-│  Origin Server   │
-│ 1. Creates RTP   │ ← Captures media stream
-│    Consumer      │
-│ 2. Spawns FFmpeg │ ← Processes video/audio
-│ 3. Muxes to WebM │ ← Container format
-│ 4. Chunks data   │ ← 2MB segments
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│     AWS S3       │
-│ Multipart Upload │ ← Stores recording
-└──────────────────┘
+Teacher hits "Record"
+        │
+        ▼
+System Manager creates a DB row, publishes recording:start on Redis
+        │
+        ▼
+Origin picks it up, creates an RTP consumer, spawns FFmpeg
+FFmpeg muxes the live RTP into a WebM container
+        │
+        ▼
+Chunks are uploaded to S3 as a multipart upload (resumable)
 ```
 
-### Recording Features:
-- **Real-time capture** of live broadcasts
-- **VP8/Opus codec** (WebM container)
-- **Multipart upload** to S3 (resumable)
-- **Access control** (Private/Classroom/Public)
-- **Download** via presigned URLs
-- **FFmpeg optimization** (copy codec, no transcoding)
+A few details worth knowing:
+- **VP8/Opus in WebM** - no transcoding, so the Origin host's CPU stays cool
+- **Multipart upload** - resumes cleanly if a chunk fails to upload
+- **Access control** is per recording (Private or Classroom-only)
+- **Downloads** are served via short-lived presigned URLs
+
+
+## Scaling notes
+
+- **Edges scale horizontally** - start more edge containers, register them with System Manager, and viewers get routed by best-edge logic (geo + load).
+- **AI service is stateless** - every request carries its own `sessionId`, so you can add replicas freely.
+- **Postgres is the bottleneck for retrieval** when concurrency gets high. Mitigations: PgBouncer / Supavisor, the IVFFLAT index that's already in migrations, and read replicas for retrieval-heavy traffic.
+- **Auto-scaling envs** (`AUTO_SCALE_MIN_EDGES`, `AUTO_SCALE_MAX_EDGES`) are available in `.env.example` if you want the manager to spin edges up and down on its own.
 
 
 ## Troubleshooting
 
-### Services Not Starting
-
+### Something won't start
 ```bash
-# Check logs
-docker-compose logs system-manager
-docker-compose logs origin-server
-
-# Common issues:
-# 1. Wrong DATABASE_URL
-# 2. Redis connection failed
-# 3. Port already in use
+docker compose logs system-manager
+docker compose logs origin-server
+docker compose logs ai-service
 ```
+The usual suspects are: wrong `DATABASE_URL`, Redis not reachable, a port already in use, or the `pgvector` extension not installed (AI service will fail loudly on startup).
 
-### Database Connection Failed
+### "Too many requests" / `Unexpected token 'T'…`
+You're getting rate-limited. In `backend/.env` make sure:
+```env
+NODE_ENV=development
+DISABLE_RATE_LIMIT=true
+```
+…and restart the system manager.
 
+### Database connection failing
 ```bash
-# Test database connectivity
 docker exec broadclass-system-manager node -e "console.log(process.env.DATABASE_URL)"
-
-# Run migrations
-docker exec broadclass-origin npx prisma migrate deploy
+docker exec broadclass-system-manager npx prisma migrate deploy
 ```
 
-### Redis Connection Failed
-
+### AI service acting up
 ```bash
-# Verify Redis URL
-docker exec broadclass-system-manager node -e "console.log(process.env.REDIS_URL)"
+# Which providers is it using?
+docker exec broadclass-ai-service env | grep _PROVIDER
 
-# Check Redis connectivity
-docker exec broadclass-system-manager node -e "
-const redis = require('redis');
-const client = redis.createClient({ url: process.env.REDIS_URL });
-client.connect().then(() => console.log('Redis OK')).catch(console.error);
-"
+# Is the embedding model cached?
+docker exec broadclass-ai-service ls /app/hf-cache
+
+# Query the vector store from the CLI
+docker exec broadclass-ai-service python scripts/query.py <sessionId> "your question"
 ```
 
-### Recording Not Working
+### Deepgram disconnects mid-broadcast
+The AI service sends keep-alives every 5 seconds during silence. If you still see drops, double-check your `DEEPGRAM_API_KEY` quota.
 
+### Recording isn't producing files
 ```bash
-# Check Origin logs
-docker logs broadclass-origin | grep recording
-
-# Verify S3 credentials
-docker exec broadclass-origin node -e "console.log(process.env.S3_ACCESS_KEY)"
-
-# Check FFmpeg is available
+docker logs broadclass-origin | grep -i recording
 docker exec broadclass-origin which ffmpeg
+docker exec broadclass-origin node -e "console.log(!!process.env.S3_ACCESS_KEY)"
 ```
 
-### Port Already in Use
-
+### Port already in use
 ```bash
 # Windows
 netstat -ano | findstr :3000
-taskkill /PID <process_id> /F
+taskkill /PID <pid> /F
 
-# Linux/Mac
+# Linux / macOS
 lsof -i :3000
-kill -9 <process_id>
+kill -9 <pid>
 ```
 
-### WebRTC Connection Failed
+### WebRTC won't connect
+1. `ANNOUNCED_IP` must match an IP your viewers can actually reach (LAN IP for local testing, public IP for production)
+2. UDP ports `40000–52399` need to be open
+3. VPNs and aggressive firewalls will break things
 
-1. Check `ANNOUNCED_IP` matches your public IP
-2. Ensure UDP ports are open (40000-52399)
-3. Check firewall settings
-4. Verify frontend can reach backend
-
-### Clean Restart
-
+### Nuclear option
 ```bash
-# Stop and remove everything
-docker-compose down -v
-
-# Remove images (optional)
-docker-compose down --rmi all
-
-# Start fresh
-docker-compose up -d
+docker compose down -v
+docker compose up -d
+docker exec broadclass-system-manager npx prisma migrate deploy
 ```
-
-
-## Additional Documentation
-
-- [Deployment Guide](./DEPLOYMENT_GUIDE.md) - Detailed deployment instructions
-- [Architecture Diagrams](./architecture.dio) - System design diagrams
-- [Database Schema](./backend/prisma/schema.prisma) - Database structure
-
 ---
 
-**Made with ❤️ by the BroadClass Team**
+Made with ❤️ by the BroadClass Team

@@ -1,14 +1,17 @@
 <mxfile host="65bd71144e">
     <diagram id="database-er" name="Database ER Diagram">
-        <mxGraphModel dx="1584" dy="1126" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+        <mxGraphModel dx="669" dy="536" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1500" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
                 <mxCell id="title" value="BroadClass Database ER Diagram" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#333333;" parent="1" vertex="1">
-                    <mxGeometry x="470" y="20" width="400" height="40" as="geometry"/>
+                    <mxGeometry x="600" y="15" width="500" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" value="PostgreSQL + pgvector (vector(384) for transcript embeddings)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=2;fontColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="50" width="500" height="20" as="geometry"/>
                 </mxCell>
                 <mxCell id="userTable" value="User" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
-                    <mxGeometry x="80" y="100" width="220" height="200" as="geometry"/>
+                    <mxGeometry x="60" y="90" width="220" height="200" as="geometry"/>
                 </mxCell>
                 <mxCell id="userId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#1565C0;" parent="userTable" vertex="1">
                     <mxGeometry y="30" width="220" height="24" as="geometry"/>
@@ -19,10 +22,10 @@
                 <mxCell id="userEmail" value="email: String (UNIQUE)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
                     <mxGeometry y="78" width="220" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="userPassword" value="password: String (bcrypt hash)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                <mxCell id="userPassword" value="password: String (bcrypt)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
                     <mxGeometry y="102" width="220" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="userRole" value="role: Role (TEACHER | STUDENT)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
+                <mxCell id="userRole" value="role: Role (TEACHER|STUDENT)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
                     <mxGeometry y="126" width="220" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="userCreatedAt" value="createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="userTable" vertex="1">
@@ -32,34 +35,112 @@
                     <mxGeometry y="174" width="220" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="classroomTable" value="Classroom" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
-                    <mxGeometry x="420" y="100" width="220" height="224" as="geometry"/>
+                    <mxGeometry x="400" y="90" width="240" height="270" as="geometry"/>
                 </mxCell>
                 <mxCell id="classId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#2E7D32;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="30" width="220" height="24" as="geometry"/>
+                    <mxGeometry y="30" width="240" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="className" value="name: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="54" width="220" height="24" as="geometry"/>
+                    <mxGeometry y="54" width="240" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="classDesc" value="description: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="78" width="220" height="24" as="geometry"/>
+                    <mxGeometry y="78" width="240" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="classSubject" value="subject: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="102" width="220" height="24" as="geometry"/>
+                    <mxGeometry y="102" width="240" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="classCode" value="code: String (UNIQUE, 6-char)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="126" width="220" height="24" as="geometry"/>
+                    <mxGeometry y="126" width="240" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="classTeacherId" value="teacherId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="150" width="220" height="24" as="geometry"/>
+                <mxCell id="classTeacherId" value="teacherId: String (FK→User)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="150" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classAiEnabled" value="aiChatEnabled: Boolean (default true)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#5E35B1;fontStyle=1;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="174" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="classSttEnabled" value="transcriptionEnabled: Boolean (true)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#5E35B1;fontStyle=1;" parent="classroomTable" vertex="1">
+                    <mxGeometry y="198" width="240" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="classCreatedAt" value="createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="174" width="220" height="24" as="geometry"/>
+                    <mxGeometry y="222" width="240" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="classUpdatedAt" value="updatedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="classroomTable" vertex="1">
-                    <mxGeometry y="198" width="220" height="24" as="geometry"/>
+                    <mxGeometry y="246" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionTable" value="BroadcastSession (Phase 8)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#EDE4FF;strokeColor=#6E35E5;strokeWidth=2;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="90" width="240" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#4527A0;" parent="sessionTable" vertex="1">
+                    <mxGeometry y="30" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionClassId" value="classroomId: String (FK→Classroom)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="sessionTable" vertex="1">
+                    <mxGeometry y="54" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionBroadcasterId" value="broadcasterId: String (FK→User)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="sessionTable" vertex="1">
+                    <mxGeometry y="78" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionTitle" value="title: String (default: &#39;&#39;)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="sessionTable" vertex="1">
+                    <mxGeometry y="102" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionStartedAt" value="startedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="sessionTable" vertex="1">
+                    <mxGeometry y="126" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionEndedAt" value="endedAt: DateTime?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="sessionTable" vertex="1">
+                    <mxGeometry y="150" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="sessionIndex" value="@@index([classroomId, startedAt desc])" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#999999;fontSize=9;" parent="sessionTable" vertex="1">
+                    <mxGeometry y="174" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recordingTable" value="Recording" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="90" width="240" height="394" as="geometry"/>
+                </mxCell>
+                <mxCell id="recId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#B91C1C;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="30" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recClassId" value="classroomId: String (FK→Classroom)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="54" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recTeacherId" value="teacherId: String (FK→User)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="78" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recSessionId" value="sessionId: String? (FK→Session)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6E35E5;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="102" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recBroadcastId" value="broadcastId: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="126" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recTitle" value="title: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="150" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recDesc" value="description: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="174" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recS3Key" value="s3Key: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="198" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recS3Url" value="s3Url: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="222" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recDuration" value="duration: Int (seconds)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="246" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recFileSize" value="fileSize: BigInt (bytes)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="270" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recStatus" value="status: RecordingStatus" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="294" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recAccessType" value="accessType: AccessType" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="318" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recStarted" value="recordingStarted: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="342" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="recEnded" value="recordingEnded: DateTime?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
+                    <mxGeometry y="366" width="240" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="enrollmentTable" value="Enrollment" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1">
-                    <mxGeometry x="80" y="370" width="220" height="130" as="geometry"/>
+                    <mxGeometry x="60" y="370" width="220" height="130" as="geometry"/>
                 </mxCell>
                 <mxCell id="enrollId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#B45309;" parent="enrollmentTable" vertex="1">
                     <mxGeometry y="30" width="220" height="24" as="geometry"/>
@@ -73,50 +154,107 @@
                 <mxCell id="enrollJoinedAt" value="joinedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="enrollmentTable" vertex="1">
                     <mxGeometry y="102" width="220" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recordingTable" value="Recording" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
-                    <mxGeometry x="760" y="100" width="240" height="370" as="geometry"/>
+                <mxCell id="transcriptTable" value="Transcript (Phase 8)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#EDE4FF;strokeColor=#6E35E5;strokeWidth=2;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="600" width="260" height="178" as="geometry"/>
                 </mxCell>
-                <mxCell id="recId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#B91C1C;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="30" width="240" height="24" as="geometry"/>
+                <mxCell id="trId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#4527A0;" parent="transcriptTable" vertex="1">
+                    <mxGeometry y="30" width="260" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recClassId" value="classroomId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="54" width="240" height="24" as="geometry"/>
+                <mxCell id="trClassId" value="classroomId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="transcriptTable" vertex="1">
+                    <mxGeometry y="54" width="260" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recTeacherId" value="teacherId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="78" width="240" height="24" as="geometry"/>
+                <mxCell id="trBroadcastId" value="broadcastId: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="transcriptTable" vertex="1">
+                    <mxGeometry y="78" width="260" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recBroadcastId" value="broadcastId: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="102" width="240" height="24" as="geometry"/>
+                <mxCell id="trSessionId" value="sessionId: String (FK→Session, NOT NULL)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6E35E5;" parent="transcriptTable" vertex="1">
+                    <mxGeometry y="102" width="260" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recTitle" value="title: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="126" width="240" height="24" as="geometry"/>
+                <mxCell id="trLanguage" value="language: String? (e.g. &#39;en&#39;)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="transcriptTable" vertex="1">
+                    <mxGeometry y="126" width="260" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recDesc" value="description: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="150" width="240" height="24" as="geometry"/>
+                <mxCell id="trCreatedAt" value="createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="transcriptTable" vertex="1">
+                    <mxGeometry y="150" width="260" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recS3Key" value="s3Key: String?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="174" width="240" height="24" as="geometry"/>
+                <mxCell id="chunkTable" value="TranscriptChunk (Phase 8 + pgvector)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#EDE4FF;strokeColor=#6E35E5;strokeWidth=2;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="600" width="320" height="298" as="geometry"/>
                 </mxCell>
-                <mxCell id="recS3Url" value="s3Url: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="198" width="240" height="24" as="geometry"/>
+                <mxCell id="chId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#4527A0;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="30" width="320" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recDuration" value="duration: Int (seconds)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="222" width="240" height="24" as="geometry"/>
+                <mxCell id="chTranscriptId" value="transcriptId: String (FK→Transcript)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6E35E5;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="54" width="320" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recFileSize" value="fileSize: BigInt (bytes)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="246" width="240" height="24" as="geometry"/>
+                <mxCell id="chSessionId" value="sessionId: String (FK→Session, NOT NULL)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6E35E5;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="78" width="320" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recStatus" value="status: RecordingStatus (Enum)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="270" width="240" height="24" as="geometry"/>
+                <mxCell id="chClassroomId" value="classroomId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="102" width="320" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recAccessType" value="accessType: AccessType (Enum)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="294" width="240" height="24" as="geometry"/>
+                <mxCell id="chBroadcastId" value="broadcastId: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="126" width="320" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recStarted" value="recordingStarted: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="318" width="240" height="24" as="geometry"/>
+                <mxCell id="chIndex" value="chunkIndex: Int (per-session)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="150" width="320" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="recEnded" value="recordingEnded: DateTime?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="recordingTable" vertex="1">
-                    <mxGeometry y="342" width="240" height="24" as="geometry"/>
+                <mxCell id="chText" value="text: Text" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="174" width="320" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="chStartMs" value="startMs: Int (offset in broadcast)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="198" width="320" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="chEndMs" value="endMs: Int" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="222" width="320" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="chEmbedding" value="embedding: vector(384)  ← pgvector" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#4527A0;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="246" width="320" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="chCreatedAt" value="createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chunkTable" vertex="1">
+                    <mxGeometry y="270" width="320" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="chatTable" value="ChatMessage (Phase 8)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;fillColor=#EDE4FF;strokeColor=#6E35E5;strokeWidth=2;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="600" width="280" height="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmId" value="id: String (PK, UUID)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontColor=#4527A0;" parent="chatTable" vertex="1">
+                    <mxGeometry y="30" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmSessionId" value="sessionId: String (FK→Session, NOT NULL)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6E35E5;" parent="chatTable" vertex="1">
+                    <mxGeometry y="54" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmClassroomId" value="classroomId: String (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#82b366;" parent="chatTable" vertex="1">
+                    <mxGeometry y="78" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmBroadcastId" value="broadcastId: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="102" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmUserId" value="userId: String (FK→User)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;fontColor=#6c8ebf;" parent="chatTable" vertex="1">
+                    <mxGeometry y="126" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmRole" value="role: ChatRole" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="150" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmContent" value="content: Text" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="174" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmParentId" value="parentId: String? (FK→self)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=2;" parent="chatTable" vertex="1">
+                    <mxGeometry y="198" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmStatus" value="status: ChatStatus" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="222" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmBroadcastMs" value="broadcastMs: Int? (timestamp)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="246" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmConfidence" value="aiConfidence: Float?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="270" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmSourceChunks" value="sourceChunkIds: String[]" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="294" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmUpvotes" value="upvoteCount: Int" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="318" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="cmCreatedAt" value="createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="chatTable" vertex="1">
+                    <mxGeometry y="342" width="280" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="rel1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565C0;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="userId" target="classTeacherId" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -135,14 +273,30 @@
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="rel3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="classId" target="enrollClassId" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel3Label" value="has" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#82b366;" parent="rel3" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relCs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6E35E5;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="classId" target="sessionClassId" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="relCsLabel" value="hosts sessions" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#4527A0;" parent="relCs" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relUs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="userId" target="sessionBroadcasterId" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="380" y="130"/>
-                            <mxPoint x="380" y="424"/>
+                            <mxPoint x="320" y="40"/>
+                            <mxPoint x="880" y="40"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="rel3Label" value="has" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#82b366;" parent="rel3" vertex="1" connectable="0">
+                <mxCell id="relUsLabel" value="broadcasts" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#6c8ebf;" parent="relUs" vertex="1" connectable="0">
                     <mxGeometry x="-0.2" relative="1" as="geometry">
                         <mxPoint as="offset"/>
                     </mxGeometry>
@@ -158,10 +312,8 @@
                 <mxCell id="rel5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="userId" target="recTeacherId" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="340" y="178"/>
-                            <mxPoint x="340" y="80"/>
-                            <mxPoint x="720" y="80"/>
-                            <mxPoint x="720" y="178"/>
+                            <mxPoint x="320" y="60"/>
+                            <mxPoint x="1240" y="60"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
@@ -170,29 +322,112 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
+                <mxCell id="relSr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6E35E5;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="sessionId" target="recSessionId" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="relSrLabel" value="recorded as" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#4527A0;" parent="relSr" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relSt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6E35E5;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="sessionId" target="trSessionId" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="730" y="540"/>
+                            <mxPoint x="40" y="540"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relStLabel" value="produces transcript" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#4527A0;" parent="relSt" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relSch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6E35E5;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="sessionId" target="chSessionId" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="700" y="560"/>
+                            <mxPoint x="540" y="560"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relSchLabel" value="indexes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#4527A0;" parent="relSch" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relSm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6E35E5;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="sessionId" target="cmSessionId" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="950" y="540"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relSmLabel" value="scopes chat" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#4527A0;" parent="relSm" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relTch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6E35E5;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="trId" target="chTranscriptId" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="relTchLabel" value="contains chunks" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#4527A0;" parent="relTch" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relUm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=ERmany;endFill=0;startArrow=ERone;startFill=0;" parent="1" source="userId" target="cmUserId" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="40" y="550"/>
+                            <mxPoint x="780" y="550"/>
+                            <mxPoint x="780" y="725"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="relUmLabel" value="posts" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#6c8ebf;" parent="relUm" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
                 <mxCell id="enumsBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=1;" parent="1" vertex="1">
-                    <mxGeometry x="795" y="530" width="560" height="130" as="geometry"/>
+                    <mxGeometry x="1140" y="600" width="380" height="450" as="geometry"/>
                 </mxCell>
                 <mxCell id="enumsTitle" value="Enums" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="1035" y="535" width="80" height="25" as="geometry"/>
+                    <mxGeometry x="1290" y="608" width="80" height="25" as="geometry"/>
                 </mxCell>
                 <mxCell id="roleEnum" value="Role&#xa;- TEACHER&#xa;- STUDENT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="810" y="570" width="120" height="70" as="geometry"/>
+                    <mxGeometry x="1160" y="645" width="160" height="70" as="geometry"/>
                 </mxCell>
                 <mxCell id="statusEnum" value="RecordingStatus&#xa;- RECORDING&#xa;- PROCESSING&#xa;- READY&#xa;- FAILED&#xa;- ARCHIVED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1010" y="570" width="130" height="80" as="geometry"/>
+                    <mxGeometry x="1340" y="645" width="160" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="accessEnum" value="AccessType&#xa;- PRIVATE&#xa;- CLASSROOM&#xa;- PUBLIC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1220" y="570" width="120" height="70" as="geometry"/>
+                <mxCell id="accessEnum" value="AccessType&#xa;- PRIVATE&#xa;- CLASSROOM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;spacingLeft=10;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1160" y="730" width="160" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="chatRoleEnum" value="ChatRole (Phase 8)&#xa;- VIEWER_QUESTION&#xa;- AI_ANSWER&#xa;- TEACHER_REPLY&#xa;- TEACHER_NOTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE4FF;strokeColor=#6E35E5;align=left;spacingLeft=10;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1340" y="760" width="160" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="chatStatusEnum" value="ChatStatus (Phase 8)&#xa;- VISIBLE&#xa;- AWAITING_TEACHER&#xa;- ANSWERED_BY_TEACHER&#xa;- DISMISSED&#xa;- HIDDEN_BY_MODERATION&#xa;- HIDDEN_BY_TEACHER" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE4FF;strokeColor=#6E35E5;align=left;spacingLeft=10;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1160" y="820" width="200" height="130" as="geometry"/>
                 </mxCell>
                 <mxCell id="indexesBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1;" parent="1" vertex="1">
-                    <mxGeometry x="80" y="530" width="520" height="80" as="geometry"/>
+                    <mxGeometry x="60" y="1000" width="1060" height="115" as="geometry"/>
                 </mxCell>
                 <mxCell id="indexesTitle" value="Indexes" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="300" y="535" width="80" height="20" as="geometry"/>
+                    <mxGeometry x="540" y="1005" width="80" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="indexesList" value="Classroom: teacherId, code (unique)&lt;br&gt;Enrollment: studentId, classroomId, [classroomId, studentId] (unique)&lt;br&gt;Recording: classroomId, teacherId, status, recordingStarted" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;spacingLeft=10;" parent="1" vertex="1">
-                    <mxGeometry x="90" y="555" width="500" height="50" as="geometry"/>
+                <mxCell id="indexesList" value="Classroom: teacherId, code (unique)&lt;br&gt;Enrollment: studentId, classroomId, [classroomId, studentId] (unique)&lt;br&gt;Recording: classroomId, teacherId, status, recordingStarted&lt;br&gt;&lt;b style=&#39;color:#4527A0&#39;&gt;BroadcastSession: [classroomId, startedAt DESC], [broadcasterId, startedAt DESC]&lt;/b&gt;&lt;br&gt;&lt;b style=&#39;color:#4527A0&#39;&gt;Transcript: sessionId · TranscriptChunk: sessionId, [sessionId, chunkIndex], embedding IVFFLAT(vector_cosine_ops)&lt;/b&gt;&lt;br&gt;&lt;b style=&#39;color:#4527A0&#39;&gt;ChatMessage: [sessionId, createdAt], [sessionId, status], userId, parentId&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;spacingLeft=10;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="1025" width="1040" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="notesBox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=1;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="1140" width="1460" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="notesTitle" value="Phase 8 Notes — Session Scoping" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#E65100;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="1150" width="500" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="notesText" value="• BroadcastSession is one row per lecture (not per classroom) — a teacher who starts a new broadcast in the same classroom gets a NEW sessionId, isolating chat + RAG context.&#xa;• broadcastId stays on Transcript/Chunk/ChatMessage for media-plane continuity (mediasoup roomId === classroomId by app convention) but sessionId is the hot query key.&#xa;• TranscriptChunk.embedding is pgvector(384) — matches sentence-transformers/all-MiniLM-L6-v2. OpenAI text-embedding-3-small also works at 384d via the API.&#xa;• ChatMessage.sourceChunkIds[] stores the chunk IDs the AI cited so the UI can render clickable timestamps." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;spacingLeft=10;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="1170" width="1440" height="65" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
